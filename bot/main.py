@@ -259,7 +259,7 @@ async def cb_report(callback: CallbackQuery):
             return
 
         # 1️⃣ Берём дату регистрации или fallback к 1 числу
-        user_created = user.created_at.date() if user.created_at else first_day_of_month
+        user_created = user.created_at if user.created_at else first_day_of_month
         from_date = max(user_created, first_day_of_month)
 
         # 2️⃣ Расчёт дней

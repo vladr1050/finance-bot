@@ -2,7 +2,7 @@ from bot_setup import dp
 from aiogram import F
 from aiogram.filters import Command
 from aiogram.types import Message
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from db.database import async_session
 from db.models import User, DailyExpense, FixedExpense, ExpenseCategory
 

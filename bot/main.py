@@ -213,8 +213,15 @@ async def get_fixed_amount(message: Message, state: FSMContext):
         return
     data = await state.get_data()
     async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = result.scalar()
+
+        if not user:
+            await message.answer("❌ User not found. Please restart with /start.")
+            return
+
         fixed = FixedExpense(
-            user_id=message.from_user.id,
+            user_id=user.id,
             name=data["fixed_name"],
             amount=amount
         )

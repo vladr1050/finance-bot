@@ -108,8 +108,16 @@ async def get_income(message: Message, state: FSMContext):
 @dp.callback_query(F.data == "edit_expense")
 async def cb_edit_expense(callback: CallbackQuery):
     async with async_session() as session:
+        user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = user_result.scalar()
+
+        if not user:
+            await callback.message.answer("❌ User not found. Use /start.")
+            await callback.answer()
+            return
+
         result = await session.execute(
-            select(FixedExpense).where(FixedExpense.user_id == callback.from_user.id)
+            select(FixedExpense).where(FixedExpense.user_id == user.id)
         )
         expenses = result.scalars().all()
 

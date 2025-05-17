@@ -250,6 +250,9 @@ async def cb_report(callback: CallbackQuery):
 
     today = date.today()
     first_day_of_month = today.replace(day=1)
+    total_days = monthrange(today.year, today.month)[1]
+    days_passed = today.day
+    days_left = total_days - today.day + 1
 
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
@@ -258,31 +261,29 @@ async def cb_report(callback: CallbackQuery):
             await callback.message.answer("Please use /start first.")
             return
 
-        user_created = user.created_at if user.created_at else first_day_of_month
-        from_date = max(user_created, first_day_of_month)
+        income = user.monthly_income or 0
+        savings = user.monthly_savings or 0
 
-        total_days = monthrange(today.year, today.month)[1]
-        days_left = total_days - today.day + 1
-
-        # Расчёт: фикс и накопления
         result = await session.execute(
             select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id)
         )
         total_fixed = result.scalar() or 0
-        savings = user.monthly_savings or 0
 
-        # Расчёт: потрачено по дням
+        monthly_budget = income - total_fixed - savings
+        budget_per_day = monthly_budget / total_days if total_days > 0 else 0
+        ideal_spent_to_today = budget_per_day * days_passed
+
+        # фактические траты
         result = await session.execute(
             select(func.sum(DailyExpense.amount)).where(
                 DailyExpense.user_id == user.id,
-                func.date(DailyExpense.created_at) >= from_date
+                func.date(DailyExpense.created_at) >= first_day_of_month
             )
         )
-        spent = result.scalar() or 0
+        real_spent = result.scalar() or 0
 
-        # Общая формула
-        income = user.monthly_income or 0
-        monthly_budget = income - total_fixed - savings
+        # новая метрика Spent
+        spent = ideal_spent_to_today + real_spent
         remaining = monthly_budget - spent
         daily_budget = remaining / days_left if days_left > 0 else 0
 
@@ -290,15 +291,14 @@ async def cb_report(callback: CallbackQuery):
         f"💼 Income: €{income:.2f}\n"
         f"📋 Fixed Expenses: €{total_fixed:.2f}\n"
         f"💰 Savings Goal: €{savings:.2f}\n"
-        f"🧮 Monthly budget: €{monthly_budget:.2f}\n\n"
-        f"🍽 Spent: €{spent:.2f} (since {from_date})\n"
+        f"🧮 Monthly Budget: €{monthly_budget:.2f}\n\n"
+        f"📉 Spent: €{spent:.2f}  (Plan: €{ideal_spent_to_today:.2f} + Actual: €{real_spent:.2f})\n"
         f"✅ Remaining: €{remaining:.2f}\n"
         f"📆 Days left: {days_left}\n"
         f"💸 Daily budget: €{daily_budget:.2f}",
         reply_markup=main_menu()
     )
     await callback.answer()
-
 
 # ----- DAILY EXPENSE ENTRY -----
 

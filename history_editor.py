@@ -12,18 +12,25 @@ from keyboards import main_menu
 
 
 def register_history_editor_handlers(dp):
-
     @dp.callback_query(F.data == "view_history")
     async def view_expense_history(callback: CallbackQuery):
         today = datetime.utcnow().date()
         start_date = today - timedelta(days=9)
 
         async with async_session() as session:
+            user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+            user = user_result.scalar()
+
+            if not user:
+                await callback.message.answer("❌ User not found. Use /start.")
+                await callback.answer()
+                return
+
             result = await session.execute(
                 select(DailyExpense, ExpenseCategory.name)
                 .join(ExpenseCategory, DailyExpense.category_id == ExpenseCategory.id)
                 .where(
-                    DailyExpense.user_id == callback.from_user.id,
+                    DailyExpense.user_id == user.id,
                     func.date(DailyExpense.created_at) >= start_date
                 )
             )

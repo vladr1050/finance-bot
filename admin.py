@@ -12,36 +12,25 @@ async def reset_categories(message: Message):
     if not message.from_user:
         return
 
-    default_categories = [
-        # 🏠 Housing
-        "Rent / Mortgage", "Utilities", "Home maintenance",
-        # 🍽 Food & Drinks
-        "Groceries", "Restaurants", "Coffee / Snacks",
-        # 🚗 Transport
-        "Fuel", "Public Transport", "Car Maintenance", "Parking / Taxi",
-        # 🛍 Shopping
-        "Clothing", "Household Goods", "Electronics",
-        # 🧘‍♂️ Health & Fitness
-        "Medical", "Pharmacy", "Gym / Fitness",
-        # 🎉 Entertainment
-        "Cinema / Theater", "Subscriptions / Streaming", "Travel",
-        # 👨‍👩‍👧‍👦 Family & Kids
-        "Education", "Kids supplies", "Gifts & Holidays",
-        # 💼 Finance & Obligations
-        "Loans / Debts", "Insurance", "Taxes",
-        # 🐾 Other
-        "Charity", "Pets", "Miscellaneous"
-    ]
+    default_categories = [ ... ]
 
     async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = result.scalar()
+
+        if not user:
+            await message.answer("❌ User not found.")
+            return
+
         await session.execute(
-            delete(ExpenseCategory).where(ExpenseCategory.user_id == message.from_user.id)
+            delete(ExpenseCategory).where(ExpenseCategory.user_id == user.id)
         )
         for name in default_categories:
-            session.add(ExpenseCategory(user_id=message.from_user.id, name=name))
+            session.add(ExpenseCategory(user_id=user.id, name=name))
         await session.commit()
 
     await message.answer("✅ Categories have been reset to default.")
+
 
 # ✅ Команда: полное удаление всех данных пользователя
 @dp.message(Command("wipe_data"))
@@ -50,12 +39,21 @@ async def wipe_user_data(message: Message):
         return
 
     async with async_session() as session:
-        user_id = message.from_user.id
+        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = result.scalar()
+
+        if not user:
+            await message.answer("❌ User not found.")
+            return
+
+        user_id = user.id
 
         await session.execute(delete(DailyExpense).where(DailyExpense.user_id == user_id))
         await session.execute(delete(FixedExpense).where(FixedExpense.user_id == user_id))
         await session.execute(delete(ExpenseCategory).where(ExpenseCategory.user_id == user_id))
-        await session.execute(delete(User).where(User.telegram_id == user_id))
+        await session.delete(user)
+
         await session.commit()
 
     await message.answer("🧨 All your data has been wiped. Use /start to begin again.")
+

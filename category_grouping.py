@@ -50,9 +50,17 @@ def register_category_group_handlers(dp):
         category_names = CATEGORY_GROUPS[group_name]
 
         async with async_session() as session:
+            user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+            user = user_result.scalar()
+
+            if not user:
+                await callback.message.answer("❌ User not found. Please use /start.")
+                await callback.answer()
+                return
+
             result = await session.execute(
                 select(ExpenseCategory).where(
-                    ExpenseCategory.user_id == callback.from_user.id,
+                    ExpenseCategory.user_id == user.id,
                     ExpenseCategory.name.in_(category_names)
                 )
             )

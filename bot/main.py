@@ -79,31 +79,23 @@ async def get_income(message: Message, state: FSMContext):
         )
         session.add(user)
         await session.commit()
+        await session.refresh(user)  # ✅ Получаем user.id
 
         # ➕ Добавление дефолтных категорий
         default_categories = [
-            # 🏠 Housing
             "Rent / Mortgage", "Utilities", "Home maintenance",
-            # 🍽 Food & Drinks
             "Groceries", "Restaurants", "Coffee / Snacks",
-            # 🚗 Transport
             "Fuel", "Public Transport", "Car Maintenance", "Parking / Taxi",
-            # 🛍 Shopping
             "Clothing", "Household Goods", "Electronics",
-            # 🧘‍♂️ Health & Fitness
             "Medical", "Pharmacy", "Gym / Fitness",
-            # 🎉 Entertainment
             "Cinema / Theater", "Subscriptions / Streaming", "Travel",
-            # 👨‍👩‍👧‍👦 Family & Kids
             "Education", "Kids supplies", "Gifts & Holidays",
-            # 💼 Finance & Obligations
             "Loans / Debts", "Insurance", "Taxes",
-            # 🐾 Other
             "Charity", "Pets", "Miscellaneous"
         ]
 
         for name in default_categories:
-            category = ExpenseCategory(user_id=user.telegram_id, name=name)
+            category = ExpenseCategory(user_id=user.id, name=name)  # ✅ используем user.id
             session.add(category)
 
         await session.commit()
@@ -248,18 +240,17 @@ async def cb_report(callback: CallbackQuery):
             return
 
         result = await session.execute(
-            select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.telegram_id)
+            select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id)
         )
         total_expenses = result.scalar() or 0
 
         result = await session.execute(
             select(func.sum(DailyExpense.amount)).where(
-                DailyExpense.user_id == user.telegram_id,
+                DailyExpense.user_id == user.id,
                 func.date(DailyExpense.created_at) >= first_day
             )
         )
         daily_total = result.scalar() or 0
-
         monthly_savings = user.monthly_savings or 0
         planned_left = user.monthly_income - total_expenses - monthly_savings
         real_left = planned_left - daily_total
@@ -381,8 +372,14 @@ async def enter_comment(message: Message, state: FSMContext):
         category = await session.get(ExpenseCategory, category_id)
         category_name = category.name if category else "Unknown"
 
+        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = result.scalar()
+        if not user:
+            await message.answer("❌ User not found.")
+            return
+
         daily = DailyExpense(
-            user_id=message.from_user.id,
+            user_id=user.id,
             category_id=category_id,
             amount=amount,
             comment=comment,
@@ -409,13 +406,21 @@ async def skip_comment(callback: CallbackQuery, state: FSMContext):
         category = await session.get(ExpenseCategory, category_id)
         category_name = category.name if category else "Unknown"
 
+        result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = result.scalar()
+        if not user:
+            await callback.message.answer("❌ User not found.")
+            await callback.answer()
+            return
+
         daily = DailyExpense(
-            user_id=callback.from_user.id,
+            user_id=user.id,
             category_id=category_id,
             amount=amount,
             comment="",
             created_at=datetime.utcnow()
         )
+
         session.add(daily)
         await session.commit()
 

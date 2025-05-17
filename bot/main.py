@@ -27,6 +27,7 @@ from keyboards import main_menu, settings_menu, after_expense_menu, skip_keyboar
 from bot_setup import bot, dp
 from savings import *
 from admin import *
+from utils import deduct_from_savings_if_needed
 from history_editor import register_history_editor_handlers
 from category_grouping import register_category_group_handlers
 register_category_group_handlers(dp)
@@ -262,18 +263,17 @@ async def cb_report(callback: CallbackQuery):
             return
 
         income = user.monthly_income or 0
-        savings = user.monthly_savings or 0
+        savings_goal = user.monthly_savings or 0
 
         result = await session.execute(
             select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id)
         )
         total_fixed = result.scalar() or 0
 
-        monthly_budget = income - total_fixed - savings
+        monthly_budget = income - total_fixed - savings_goal
         budget_per_day = monthly_budget / total_days if total_days > 0 else 0
         ideal_spent_to_today = budget_per_day * days_passed
 
-        # фактические траты
         result = await session.execute(
             select(func.sum(DailyExpense.amount)).where(
                 DailyExpense.user_id == user.id,
@@ -282,20 +282,33 @@ async def cb_report(callback: CallbackQuery):
         )
         real_spent = result.scalar() or 0
 
-        # новая метрика Spent
         spent = ideal_spent_to_today + real_spent
         remaining = monthly_budget - spent
         daily_budget = remaining / days_left if days_left > 0 else 0
 
+        # Получим баланс накоплений
+        result = await session.execute(
+            select(SavingsBalance).where(SavingsBalance.user_id == user.id)
+        )
+        savings = result.scalar()
+        savings_amount = savings.amount if savings else 0.0
+
+    # 🔻 Если накопления в минусе — покажем предупреждение
+    savings_note = ""
+    if savings_amount < 0:
+        savings_note = "\n⚠️ You are overspending and now in **debt**!"
+
     await callback.message.answer(
         f"💼 Income: €{income:.2f}\n"
         f"📋 Fixed Expenses: €{total_fixed:.2f}\n"
-        f"💰 Savings Goal: €{savings:.2f}\n"
+        f"💰 Savings Goal: €{savings_goal:.2f}\n"
         f"🧮 Monthly Budget: €{monthly_budget:.2f}\n\n"
         f"📉 Spent: €{spent:.2f}  (Plan: €{ideal_spent_to_today:.2f} + Actual: €{real_spent:.2f})\n"
         f"✅ Remaining: €{remaining:.2f}\n"
         f"📆 Days left: {days_left}\n"
-        f"💸 Daily budget: €{daily_budget:.2f}",
+        f"💸 Daily budget: €{daily_budget:.2f}\n\n"
+        f"💰 Savings Balance: €{savings_amount:.2f}"
+        f"{savings_note}",
         reply_markup=main_menu()
     )
     await callback.answer()

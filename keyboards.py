@@ -5,6 +5,7 @@ def main_menu():
         [InlineKeyboardButton(text="➕ Add Expense", callback_data="daily_expense")],
         [InlineKeyboardButton(text="📊 Report", callback_data="report")],
         [InlineKeyboardButton(text="📅 History", callback_data="view_history")],
+        [InlineKeyboardButton(text="💰 Savings", callback_data="view_savings")],
         [InlineKeyboardButton(text="⚙️ Settings", callback_data="settings")]
     ])
 
@@ -50,3 +51,9 @@ def back_keyboard(callback_data="main_menu"):
             [InlineKeyboardButton(text="🔙 Back", callback_data=callback_data)]
         ]
     )
+def savings_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Add", callback_data="add_savings")],
+        [InlineKeyboardButton(text="➖ Withdraw", callback_data="withdraw_savings")],
+        [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
+    ])

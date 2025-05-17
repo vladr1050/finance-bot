@@ -35,3 +35,10 @@ class ExpenseCategory(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String, nullable=False)
+
+class SavingsBalance(Base):
+    __tablename__ = 'savings_balance'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    amount = Column(Float, default=0.0)
+

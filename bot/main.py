@@ -114,8 +114,11 @@ async def cb_edit_expense(callback: CallbackQuery):
         expenses = result.scalars().all()
 
     if not expenses:
-        await callback.message.answer("You have no fixed expenses yet.")
-        await callback.message.answer("🔙 Back to Settings", reply_markup=back_keyboard("settings"))
+        buttons = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="➕ Add", callback_data="add_expense")],
+            [InlineKeyboardButton(text="⬅️ Back", callback_data="settings")]
+        ])
+        await callback.message.answer("You have no fixed expenses yet.", reply_markup=buttons)
         await callback.answer()
         return
 

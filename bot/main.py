@@ -140,10 +140,13 @@ async def cb_edit_expense(callback: CallbackQuery):
         ])
         await callback.message.answer(f"{e.name}: €{e.amount}", reply_markup=buttons)
 
-    # Добавляем кнопку Back ОДИН РАЗ в конце
-    await callback.message.answer("🔙 Back to Settings", reply_markup=back_keyboard("settings"))
+    # Добавляем кнопки Add и Back внизу
+    final_buttons = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Add", callback_data="add_expense")],
+        [InlineKeyboardButton(text="⬅️ Back", callback_data="settings")]
+    ])
+    await callback.message.answer("Back to Settings", reply_markup=final_buttons)
     await callback.answer()
-
 
 @dp.callback_query(F.data.startswith("delete_fixed_"))
 async def delete_fixed(callback: CallbackQuery):

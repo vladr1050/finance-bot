@@ -529,6 +529,7 @@ async def main():
     logger.info(f"BOT_TOKEN loaded: {Config.BOT_TOKEN}")
     logger.info("🚀 Starting bot...")
     await init_db()
+    await check_or_create_monthly_budgets()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

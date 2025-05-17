@@ -42,3 +42,14 @@ class SavingsBalance(Base):
     user_id = Column(Integer, ForeignKey("users.id"), unique=True)
     amount = Column(Float, default=0.0)
 
+class MonthlyBudget(Base):
+    __tablename__ = 'monthly_budgets'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    month_start = Column(DateTime, nullable=False)
+    income = Column(Float, nullable=False)
+    fixed = Column(Float, nullable=False)
+    savings_goal = Column(Float, nullable=False)
+    remaining = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+

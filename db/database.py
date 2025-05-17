@@ -1,17 +1,15 @@
-# db/database.py
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select, func
 
-from db.models import Base, User, FixedExpense, MonthlyBudget
+from db.models import Base, User, FixedExpense, MonthlyBudget, SavingsBalance, DailyExpense
 from config import Config
 
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = Config.DB_URL
-
 engine = create_async_engine(DATABASE_URL, echo=False)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

@@ -2,6 +2,9 @@ import sys
 import os
 import logging
 
+print(f"👉 ENV BOT_TOKEN: {os.getenv('BOT_TOKEN')}")
+print(f"👉 ENV DB_URL: {os.getenv('DB_URL')}")
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

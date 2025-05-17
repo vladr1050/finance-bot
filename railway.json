@@ -1,9 +1,10 @@
 {
   "crons": [
     {
-      "command": "python monthly_task.py",
+      "command": "python cron_monthly_budget/monthly_task.py",
       "schedule": "0 0 1 * *",
       "name": "monthly-budget-update"
     }
   ]
 }
+

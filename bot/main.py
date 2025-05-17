@@ -145,7 +145,7 @@ async def cb_edit_expense(callback: CallbackQuery):
         [InlineKeyboardButton(text="➕ Add", callback_data="add_expense")],
         [InlineKeyboardButton(text="⬅️ Back", callback_data="settings")]
     ])
-    await callback.message.answer(reply_markup=final_buttons)
+    await callback.message.answer("➕ Add more or go back:", reply_markup=final_buttons)
     await callback.answer()
 
 @dp.callback_query(F.data.startswith("delete_fixed_"))

@@ -249,9 +249,7 @@ async def cb_report(callback: CallbackQuery):
     from calendar import monthrange
 
     today = date.today()
-    first_day = today.replace(day=1)
-    total_days = monthrange(today.year, today.month)[1]
-    days_left = total_days - today.day + 1
+    first_day_of_month = today.replace(day=1)
 
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
@@ -260,6 +258,19 @@ async def cb_report(callback: CallbackQuery):
             await callback.message.answer("Please use /start first.")
             return
 
+        # 1️⃣ Берём дату регистрации или fallback к 1 числу
+        user_created = user.created_at.date() if user.created_at else first_day_of_month
+        from_date = max(user_created, first_day_of_month)
+
+        # 2️⃣ Расчёт дней
+        total_days = monthrange(today.year, today.month)[1]
+        days_active = (today - from_date).days + 1
+        days_left = total_days - today.day + 1
+
+        # 3️⃣ Корректируем доход под активные дни
+        adjusted_income = user.monthly_income * (days_active / total_days)
+
+        # 4️⃣ Расходы
         result = await session.execute(
             select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id)
         )
@@ -268,20 +279,21 @@ async def cb_report(callback: CallbackQuery):
         result = await session.execute(
             select(func.sum(DailyExpense.amount)).where(
                 DailyExpense.user_id == user.id,
-                func.date(DailyExpense.created_at) >= first_day
+                func.date(DailyExpense.created_at) >= from_date
             )
         )
         daily_total = result.scalar() or 0
+
         monthly_savings = user.monthly_savings or 0
-        planned_left = user.monthly_income - total_expenses - monthly_savings
+        planned_left = adjusted_income - total_expenses - monthly_savings
         real_left = planned_left - daily_total
         daily_budget = real_left / days_left if days_left > 0 else 0
 
     await callback.message.answer(
-        f"💼 Income: €{user.monthly_income:.2f}\n"
+        f"💼 Income (adjusted): €{adjusted_income:.2f}\n"
         f"📉 Fixed: €{total_expenses:.2f}\n"
         f"🪙 Savings: €{monthly_savings:.2f}\n"
-        f"🍽 Spent (this month): €{daily_total:.2f}\n"
+        f"🍽 Spent: €{daily_total:.2f} (since {from_date})\n"
         f"✅ Left: €{real_left:.2f}\n"
         f"📆 Days left: {days_left}\n"
         f"💸 Daily budget: €{daily_budget:.2f}",

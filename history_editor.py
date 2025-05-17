@@ -5,7 +5,7 @@ from sqlalchemy import select, func
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from db.models import DailyExpense, ExpenseCategory
+from db.models import User, DailyExpense, ExpenseCategory
 from db.database import async_session
 from states import EditDailyExpense
 from keyboards import main_menu

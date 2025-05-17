@@ -12,7 +12,17 @@ async def reset_categories(message: Message):
     if not message.from_user:
         return
 
-    default_categories = [ ... ]
+    default_categories = [
+        "Rent / Mortgage", "Utilities", "Home maintenance",
+        "Groceries", "Restaurants", "Coffee / Snacks",
+        "Fuel", "Public Transport", "Car Maintenance", "Parking / Taxi",
+        "Clothing", "Household Goods", "Electronics",
+        "Medical", "Pharmacy", "Gym / Fitness",
+        "Cinema / Theater", "Subscriptions / Streaming", "Travel",
+        "Education", "Kids supplies", "Gifts & Holidays",
+        "Loans / Debts", "Insurance", "Taxes",
+        "Charity", "Pets", "Miscellaneous"
+    ]
 
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))

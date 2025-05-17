@@ -258,48 +258,47 @@ async def cb_report(callback: CallbackQuery):
             await callback.message.answer("Please use /start first.")
             return
 
-        # 1️⃣ Берём дату регистрации или fallback к 1 числу
         user_created = user.created_at if user.created_at else first_day_of_month
         from_date = max(user_created, first_day_of_month)
 
-        # 2️⃣ Расчёт дней
         total_days = monthrange(today.year, today.month)[1]
-        days_active = (today - from_date).days + 1
         days_left = total_days - today.day + 1
 
-        # 3️⃣ Корректируем доход под активные дни
-        adjusted_income = user.monthly_income * (days_active / total_days)
-
-        # 4️⃣ Расходы
+        # Расчёт: фикс и накопления
         result = await session.execute(
             select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id)
         )
-        total_expenses = result.scalar() or 0
+        total_fixed = result.scalar() or 0
+        savings = user.monthly_savings or 0
 
+        # Расчёт: потрачено по дням
         result = await session.execute(
             select(func.sum(DailyExpense.amount)).where(
                 DailyExpense.user_id == user.id,
                 func.date(DailyExpense.created_at) >= from_date
             )
         )
-        daily_total = result.scalar() or 0
+        spent = result.scalar() or 0
 
-        monthly_savings = user.monthly_savings or 0
-        planned_left = adjusted_income - total_expenses - monthly_savings
-        real_left = planned_left - daily_total
-        daily_budget = real_left / days_left if days_left > 0 else 0
+        # Общая формула
+        income = user.monthly_income or 0
+        monthly_budget = income - total_fixed - savings
+        remaining = monthly_budget - spent
+        daily_budget = remaining / days_left if days_left > 0 else 0
 
     await callback.message.answer(
-        f"💼 Income (adjusted): €{adjusted_income:.2f}\n"
-        f"📉 Fixed: €{total_expenses:.2f}\n"
-        f"🪙 Savings: €{monthly_savings:.2f}\n"
-        f"🍽 Spent: €{daily_total:.2f} (since {from_date})\n"
-        f"✅ Left: €{real_left:.2f}\n"
+        f"💼 Income: €{income:.2f}\n"
+        f"📋 Fixed Expenses: €{total_fixed:.2f}\n"
+        f"💰 Savings Goal: €{savings:.2f}\n"
+        f"🧮 Monthly budget: €{monthly_budget:.2f}\n\n"
+        f"🍽 Spent: €{spent:.2f} (since {from_date})\n"
+        f"✅ Remaining: €{remaining:.2f}\n"
         f"📆 Days left: {days_left}\n"
         f"💸 Daily budget: €{daily_budget:.2f}",
         reply_markup=main_menu()
     )
     await callback.answer()
+
 
 # ----- DAILY EXPENSE ENTRY -----
 

@@ -12,6 +12,7 @@ class User(Base):
     name = Column(String, nullable=True)
     monthly_income = Column(Float, nullable=True)  # Был Integer
     monthly_savings = Column(Float, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class FixedExpense(Base):
     __tablename__ = 'fixed_expenses'

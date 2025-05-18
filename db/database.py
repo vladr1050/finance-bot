@@ -23,18 +23,21 @@ async def init_db():
 # ─────────────────────────────────────
 
 async def check_or_create_monthly_budgets():
-    from datetime import timedelta
     today = date.today()
     month_start = today.replace(day=1)
     prev_month_end = month_start - timedelta(days=1)
     prev_month_start = prev_month_end.replace(day=1)
+
+    total_days = (month_start.replace(month=month_start.month % 12 + 1, day=1) - timedelta(days=1)).day
+    days_left = (month_start.replace(month=month_start.month % 12 + 1, day=1) - today).days + 1
+    coefficient = days_left / total_days if total_days else 1.0
 
     async with async_session() as session:
         result = await session.execute(select(User))
         users = result.scalars().all()
 
         for user in users:
-            # ── Пропускаем, если бюджет уже есть ─────────────
+            # Пропустить, если бюджет уже существует
             result = await session.execute(
                 select(MonthlyBudget).where(
                     MonthlyBudget.user_id == user.id,
@@ -44,7 +47,6 @@ async def check_or_create_monthly_budgets():
             if result.scalar():
                 continue
 
-            # ── Доходы, расходы, цели ─────────────
             income = user.monthly_income or 0.0
             savings_goal = user.monthly_savings or 0.0
 
@@ -53,10 +55,13 @@ async def check_or_create_monthly_budgets():
             )
             fixed_total = result.scalar() or 0.0
 
-            # ── Считаем новый remaining ─────────────
-            remaining = income - fixed_total - savings_goal
+            # Пропорциональный бюджет
+            adjusted_income = income * coefficient
+            adjusted_fixed = fixed_total * coefficient
+            adjusted_savings = savings_goal * coefficient
+            remaining = adjusted_income - adjusted_fixed - adjusted_savings
 
-            # ── Получаем баланс накоплений или создаём ─────────────
+            # Баланс накоплений
             result = await session.execute(
                 select(SavingsBalance).where(SavingsBalance.user_id == user.id)
             )
@@ -65,7 +70,7 @@ async def check_or_create_monthly_budgets():
                 savings = SavingsBalance(user_id=user.id, amount=0.0)
                 session.add(savings)
 
-            # ── Шаг 1: Добавляем остаток прошлого месяца в накопления ─────────────
+            # Добавляем остаток прошлого месяца в накопления
             result = await session.execute(
                 select(MonthlyBudget).where(
                     MonthlyBudget.user_id == user.id,
@@ -77,7 +82,7 @@ async def check_or_create_monthly_budgets():
                 logger.info(f"💸 Adding €{prev_budget.remaining:.2f} to savings from leftover")
                 savings.amount += prev_budget.remaining
 
-            # ── Шаг 2: Считаем фактические траты за прошлый месяц ─────────────
+            # Учитываем перерасход
             result = await session.execute(
                 select(func.sum(DailyExpense.amount)).where(
                     DailyExpense.user_id == user.id,
@@ -95,18 +100,21 @@ async def check_or_create_monthly_budgets():
                 logger.info(f"❗ Overspent €{overspent:.2f} in previous month → deducting from savings")
                 savings.amount -= overspent
 
-            # ── Добавляем бюджет нового месяца ─────────────
-            logger.info(f"📝 Creating budget for user {user.id} on {month_start}: income={income}, fixed={fixed_total}, savings_goal={savings_goal}, remaining={remaining}")
+            # Сохраняем бюджет
+            logger.info(
+                f"📝 Creating budget for user {user.id} on {month_start}: income={income}, fixed={fixed_total}, "
+                f"savings_goal={savings_goal}, remaining={remaining:.2f}, coefficient={coefficient:.2f}"
+            )
             new_budget = MonthlyBudget(
                 user_id=user.id,
                 month_start=month_start,
                 income=income,
                 fixed=fixed_total,
                 savings_goal=savings_goal,
-                remaining=remaining
+                remaining=remaining,
+                coefficient=coefficient
             )
             session.add(new_budget)
 
         await session.commit()
         logger.info("✅ Monthly budgets updated (new + savings adjustments)")
-

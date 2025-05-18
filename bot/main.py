@@ -2,9 +2,6 @@ import sys
 import os
 import logging
 
-print(f"👉 ENV BOT_TOKEN: {os.getenv('BOT_TOKEN')}")
-print(f"👉 ENV DB_URL: {os.getenv('DB_URL')}")
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -255,58 +252,66 @@ async def cb_report(callback: CallbackQuery):
     today = date.today()
     first_day_of_month = today.replace(day=1)
     total_days = monthrange(today.year, today.month)[1]
-    days_passed = today.day
     days_left = total_days - today.day + 1
 
     async with async_session() as session:
+        # Получаем пользователя
         result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
         user = result.scalar()
         if not user:
             await callback.message.answer("Please use /start first.")
             return
 
-        income = user.monthly_income or 0
-        savings_goal = user.monthly_savings or 0
-
+        # Получаем бюджет пользователя
         result = await session.execute(
-            select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id)
+            select(MonthlyBudget).where(
+                MonthlyBudget.user_id == user.id,
+                MonthlyBudget.month_start == first_day_of_month
+            )
         )
-        total_fixed = result.scalar() or 0
+        budget = result.scalar()
+        if not budget:
+            await callback.message.answer("❌ Monthly budget not found.")
+            return
 
-        monthly_budget = income - total_fixed - savings_goal
-        budget_per_day = monthly_budget / total_days if total_days > 0 else 0
-        ideal_spent_to_today = budget_per_day * days_passed
+        # Идеальный бюджет
+        monthly_budget = budget.income - budget.fixed - budget.savings_goal
+        coefficient = budget.coefficient or 1.0
+        adjusted_budget = monthly_budget * coefficient
 
+        # Считаем общие расходы за месяц
         result = await session.execute(
             select(func.sum(DailyExpense.amount)).where(
                 DailyExpense.user_id == user.id,
                 func.date(DailyExpense.created_at) >= first_day_of_month
             )
         )
-        real_spent = result.scalar() or 0
+        real_spent = result.scalar() or 0.0
 
-        spent = ideal_spent_to_today + real_spent
-        remaining = monthly_budget - spent
+        # Новый расчёт
+        spent = real_spent
+        remaining = adjusted_budget - spent
         daily_budget = remaining / days_left if days_left > 0 else 0
 
-        # Получим баланс накоплений
+        # Баланс накоплений
         result = await session.execute(
             select(SavingsBalance).where(SavingsBalance.user_id == user.id)
         )
         savings = result.scalar()
         savings_amount = savings.amount if savings else 0.0
 
-    # 🔻 Если накопления в минусе — покажем предупреждение
+    # ⚠️ Предупреждение о перерасходе
     savings_note = ""
     if savings_amount < 0:
         savings_note = "\n⚠️ You are overspending and now in **debt**!"
 
     await callback.message.answer(
-        f"💼 Income: €{income:.2f}\n"
-        f"📋 Fixed Expenses: €{total_fixed:.2f}\n"
-        f"💰 Savings Goal: €{savings_goal:.2f}\n"
-        f"🧮 Monthly Budget: €{monthly_budget:.2f}\n\n"
-        f"📉 Spent: €{spent:.2f}  (Plan: €{ideal_spent_to_today:.2f} + Actual: €{real_spent:.2f})\n"
+        f"💼 Income: €{budget.income:.2f}\n"
+        f"📋 Fixed Expenses: €{budget.fixed:.2f}\n"
+        f"💰 Savings Goal: €{budget.savings_goal:.2f}\n"
+        f"📆 Budget coverage: {coefficient:.2f} of month\n"
+        f"🧮 Monthly Budget: €{adjusted_budget:.2f}\n\n"
+        f"📉 Spent: €{spent:.2f}\n"
         f"✅ Remaining: €{remaining:.2f}\n"
         f"📆 Days left: {days_left}\n"
         f"💸 Daily budget: €{daily_budget:.2f}\n\n"

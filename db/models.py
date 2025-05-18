@@ -51,5 +51,7 @@ class MonthlyBudget(Base):
     fixed = Column(Float, nullable=False)
     savings_goal = Column(Float, nullable=False)
     remaining = Column(Float, nullable=False)
+    coefficient = Column(Float, default=1.0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
 

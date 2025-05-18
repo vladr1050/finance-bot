@@ -16,7 +16,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import Config
 from db.database import init_db, async_session, check_or_create_monthly_budgets
-from db.models import User, FixedExpense, DailyExpense, ExpenseCategory
+from db.models import User, FixedExpense, DailyExpense, ExpenseCategory, MonthlyBudget
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from collections import defaultdict

@@ -37,7 +37,6 @@ async def check_or_create_monthly_budgets():
         users = result.scalars().all()
 
         for user in users:
-            # Пропустить, если бюджет уже существует
             result = await session.execute(
                 select(MonthlyBudget).where(
                     MonthlyBudget.user_id == user.id,
@@ -55,13 +54,11 @@ async def check_or_create_monthly_budgets():
             )
             fixed_total = result.scalar() or 0.0
 
-            # Пропорциональный бюджет
             adjusted_income = income * coefficient
             adjusted_fixed = fixed_total * coefficient
             adjusted_savings = savings_goal * coefficient
             remaining = adjusted_income - adjusted_fixed - adjusted_savings
 
-            # Баланс накоплений
             result = await session.execute(
                 select(SavingsBalance).where(SavingsBalance.user_id == user.id)
             )
@@ -70,7 +67,9 @@ async def check_or_create_monthly_budgets():
                 savings = SavingsBalance(user_id=user.id, amount=0.0)
                 session.add(savings)
 
-            # Добавляем остаток прошлого месяца в накопления
+            # Логика формирования сбережений с пояснением:
+            log_parts = []
+
             result = await session.execute(
                 select(MonthlyBudget).where(
                     MonthlyBudget.user_id == user.id,
@@ -78,11 +77,12 @@ async def check_or_create_monthly_budgets():
                 )
             )
             prev_budget = result.scalar()
+            leftover = 0
             if prev_budget and prev_budget.remaining > 0:
-                logger.info(f"💸 Adding €{prev_budget.remaining:.2f} to savings from leftover")
-                savings.amount += prev_budget.remaining
+                leftover = prev_budget.remaining
+                savings.amount += leftover
+                log_parts.append(f"💸 Leftover: €{leftover:.2f}")
 
-            # Учитываем перерасход
             result = await session.execute(
                 select(func.sum(DailyExpense.amount)).where(
                     DailyExpense.user_id == user.id,
@@ -97,10 +97,17 @@ async def check_or_create_monthly_budgets():
 
             overspent = real_spent - allowed_spent
             if overspent > 0:
-                logger.info(f"❗ Overspent €{overspent:.2f} in previous month → deducting from savings")
                 savings.amount -= overspent
+                log_parts.append(f"❗ Overspent: €{overspent:.2f}")
 
-            # Сохраняем бюджет
+            goal_addition = adjusted_savings
+            savings.amount += goal_addition
+            log_parts.append(f"📥 Current savings goal: €{goal_addition:.2f}")
+
+            logger.info(
+                f"🧮 Final savings for user {user.id}: {savings.amount:.2f} = " + " + ".join(log_parts)
+            )
+
             logger.info(
                 f"📝 Creating budget for user {user.id} on {month_start}: income={income}, fixed={fixed_total}, "
                 f"savings_goal={savings_goal}, remaining={remaining:.2f}, coefficient={coefficient:.2f}"

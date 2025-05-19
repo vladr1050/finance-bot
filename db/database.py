@@ -55,10 +55,9 @@ async def check_or_create_monthly_budgets():
             )
             fixed_total = result.scalar() or 0.0
 
-            adjusted_income = income * coefficient
-            adjusted_fixed = fixed_total * coefficient
-            # NOTE: savings_goal не корректируется по коэффициенту!
-            remaining = adjusted_income - adjusted_fixed - savings_goal
+            # Коэффициент применяется только к оставшемуся бюджету
+            full_remaining = income - fixed_total - savings_goal
+            remaining = full_remaining * coefficient
 
             result = await session.execute(
                 select(SavingsBalance).where(SavingsBalance.user_id == user.id)

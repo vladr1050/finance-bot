@@ -1,3 +1,4 @@
+import logging
 from datetime import date, timedelta
 from sqlalchemy import func, select
 from db.models import User, DailyExpense, MonthlyBudget, SavingsBalance

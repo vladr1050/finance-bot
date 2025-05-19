@@ -57,8 +57,8 @@ async def check_or_create_monthly_budgets():
 
             adjusted_income = income * coefficient
             adjusted_fixed = fixed_total * coefficient
-            adjusted_savings = savings_goal * coefficient
-            remaining = adjusted_income - adjusted_fixed - adjusted_savings
+            # NOTE: savings_goal не корректируется по коэффициенту!
+            remaining = adjusted_income - adjusted_fixed - savings_goal
 
             result = await session.execute(
                 select(SavingsBalance).where(SavingsBalance.user_id == user.id)
@@ -68,7 +68,6 @@ async def check_or_create_monthly_budgets():
                 savings = SavingsBalance(user_id=user.id, amount=0.0)
                 session.add(savings)
 
-            # Логика формирования сбережений с пояснением:
             log_parts = []
 
             result = await session.execute(
@@ -101,12 +100,8 @@ async def check_or_create_monthly_budgets():
                 savings.amount -= overspent
                 log_parts.append(f"❗ Overspent: €{overspent:.2f}")
 
-            goal_addition = adjusted_savings
-            savings.amount += goal_addition
-            log_parts.append(f"📥 Current savings goal: €{goal_addition:.2f}")
-
             logger.info(
-                f"🧮 Final savings for user {user.id}: {savings.amount:.2f} = " + " + ".join(log_parts)
+                f"🧮 Final savings for user {user.id}: {savings.amount:.2f} = " + " + ".join(log_parts) if log_parts else "No change"
             )
 
             logger.info(

@@ -44,6 +44,7 @@ async def check_or_create_monthly_budgets():
                 )
             )
             if result.scalar():
+                logger.info(f"⏭ Skipping user {user.id}, budget already exists for {month_start}")
                 continue
 
             income = user.monthly_income or 0.0

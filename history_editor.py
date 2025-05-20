@@ -18,8 +18,10 @@ def register_history_editor_handlers(dp):
         start_date = today - timedelta(days=9)
 
         async with async_session() as session:
-            user_result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
-            user = user_result.scalar()
+            result = await session.execute(
+                select(User).where(User.telegram_id == callback.from_user.id)
+            )
+            user = result.scalar()
 
             if not user:
                 await callback.message.answer("❌ User not found. Use /start.")
@@ -37,7 +39,7 @@ def register_history_editor_handlers(dp):
             rows = result.all()
 
         if not rows:
-            await callback.message.answer("📭 No daily expenses found in the last 10 days.")
+            await callback.message.answer("📭 No daily expenses found.")
             await callback.answer()
             return
 
@@ -45,21 +47,25 @@ def register_history_editor_handlers(dp):
         for expense, category_name in rows:
             grouped[expense.created_at.date()].append((expense, category_name))
 
-        for date_key in sorted(grouped.keys(), reverse=True):
-            await callback.message.answer(f"📅 {date_key.strftime('%Y-%m-%d')}")
-            for e, cat_name in grouped[date_key]:
-                text = f"• {cat_name} — €{e.amount:.2f}"
-                if e.comment:
-                    text += f" ({e.comment})"
+        sorted_days = sorted(grouped.keys(), reverse=True)
+        messages = []
 
-                buttons = InlineKeyboardMarkup(inline_keyboard=[
-                    [
-                        InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_daily_{e.id}"),
-                        InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_daily_{e.id}")
-                    ]
-                ])
-                await callback.message.answer(text, reply_markup=buttons)
+        for d in sorted_days:
+            lines = [f"📅 {d.strftime('%Y-%m-%d')}"]
+            total = 0
+            for e, cat_name in grouped[d]:
+                comment = f" ({e.comment})" if e.comment else ""
+                lines.append(f"• {cat_name} — €{e.amount:.2f}{comment}")
+                total += e.amount
+            lines.append(f"💰 Total: €{total:.2f}")
+            messages.append("\n".join(lines))
 
+        text = "\n\n".join(messages)
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="✏️ Edit Expenses", callback_data="edit_history")],
+            [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
+        ])
+        await callback.message.answer(text, reply_markup=keyboard)
         await callback.answer()
 
     @dp.callback_query(F.data.startswith("delete_daily_"))

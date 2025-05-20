@@ -364,17 +364,6 @@ async def view_expense_history(callback: CallbackQuery):
     await callback.message.answer("\n\n".join(messages), reply_markup=main_menu())
     await callback.answer()
 
-@dp.callback_query(F.data == "clear_daily_expenses")
-async def clear_user_daily_expenses(callback: CallbackQuery):
-    async with async_session() as session:
-        await session.execute(
-            DailyExpense.__table__.delete().where(DailyExpense.user_id == callback.from_user.id)
-        )
-        await session.commit()
-    await callback.message.answer("🧹 All your daily expenses have been cleared.", reply_markup=main_menu())
-    await callback.answer()
-
-
 @dp.callback_query(F.data.startswith("cat_"))
 async def choose_category(callback: CallbackQuery, state: FSMContext):
     category_id = int(callback.data.split("_")[1])

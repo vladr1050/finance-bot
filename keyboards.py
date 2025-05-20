@@ -14,7 +14,6 @@ def settings_menu():
         [InlineKeyboardButton(text="💼 Edit Income", callback_data="edit_income")],
         [InlineKeyboardButton(text="📋 Edit Fixed Expenses", callback_data="edit_expense")],
         [InlineKeyboardButton(text="💰 Set Savings", callback_data="set_savings")],
-        [InlineKeyboardButton(text="🧹 Clear Daily Expenses", callback_data="clear_daily_expenses")],
         [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
     ])
 def after_expense_menu():

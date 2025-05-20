@@ -149,7 +149,7 @@ def register_history_editor_handlers(dp):
         await show_start_calendar(callback, state)
         await callback.answer()
 
-    @dp.callback_query(F.data.startswith("SCD"))
+    @dp.callback_query(F.data.startswith("simple_calendar:DAY:"))
     async def on_calendar_select(callback: CallbackQuery, state: FSMContext):
         print(f"📅 Received raw callback: {callback.data}")
         from custom_calendar import process_calendar

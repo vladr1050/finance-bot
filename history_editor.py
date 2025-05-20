@@ -150,7 +150,7 @@ def register_history_editor_handlers(dp):
         await process_calendar(callback, {"data": callback.data}, state, show_expense_history_for_range)
         await callback.answer()
 
-    async def show_expense_history_for_range(callback: CallbackQuery, start_date: date, end_date: date):
+async def show_expense_history_for_range(callback: CallbackQuery, start_date: date, end_date: date):
         async with async_session() as session:
             result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
             user = result.scalar()

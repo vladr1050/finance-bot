@@ -131,9 +131,9 @@ async def process_savings_amount(message: Message, state: FSMContext):
 
     from aiogram import F
 
-    @dp.callback_query(F.data == "cancel")
-    async def cancel_savings_input(callback: CallbackQuery, state: FSMContext):
-        await state.clear()
-        await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
-        await callback.answer()
+@dp.callback_query(F.data == "cancel")
+async def cancel_savings_input(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
+    await callback.answer()
 

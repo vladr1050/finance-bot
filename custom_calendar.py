@@ -1,4 +1,4 @@
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardButton
 from aiogram_calendar import SimpleCalendar
 from aiogram.fsm.context import FSMContext
 from datetime import date

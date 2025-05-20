@@ -11,7 +11,7 @@ from states import EditDailyExpense
 from keyboards import main_menu
 
 from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
-from custom_calendar import show_start_calendar, process_calendar, cancel_calendar
+from custom_calendar import show_start_calendar, process_calendar, show_end_calendar
 
 def register_history_editor_handlers(dp):
     @dp.callback_query(F.data == "view_history")
@@ -167,7 +167,6 @@ def register_history_editor_handlers(dp):
     @dp.callback_query(F.data.startswith("simple_calendar:DAY:"))
     async def on_calendar_select(callback: CallbackQuery, state: FSMContext):
         print(f"📅 Received raw callback: {callback.data}")
-        from custom_calendar import process_calendar
         callback_data = SimpleCalendarCallback.unpack(callback.data)
         data = await state.get_data()
         edit_mode = data.get("view_mode") == "edit"
@@ -184,12 +183,6 @@ def register_history_editor_handlers(dp):
     async def cancel_range(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
-        await callback.answer()
-
-    @dp.callback_query(F.data == "calendar_cancel")
-    async def cancel_calendar(callback: CallbackQuery, state: FSMContext):
-        await state.clear()
-        await callback.message.edit_text("❌ Calendar cancelled.", reply_markup=main_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "calendar_today")

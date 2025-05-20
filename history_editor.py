@@ -70,6 +70,11 @@ def register_history_editor_handlers(dp):
         await callback.message.answer(text, reply_markup=keyboard)
         await callback.answer()
 
+    @dp.callback_query(F.data == "edit_history")
+    async def handle_edit_history(callback: CallbackQuery, state: FSMContext):
+        await show_start_calendar(callback, state)
+        await callback.answer()
+
     @dp.callback_query(F.data.startswith("delete_daily_"))
     async def delete_daily_expense(callback: CallbackQuery):
         expense_id = int(callback.data.split("_")[-1])

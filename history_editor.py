@@ -10,6 +10,8 @@ from db.database import async_session
 from states import EditDailyExpense
 from keyboards import main_menu
 
+from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
+from calendar import show_start_calendar, process_calendar
 
 def register_history_editor_handlers(dp):
     @dp.callback_query(F.data == "view_history")
@@ -136,3 +138,14 @@ def register_history_editor_handlers(dp):
 
         await message.answer("✅ Comment updated.", reply_markup=main_menu())
         await state.clear()
+
+    @dp.callback_query(F.data == "edit_range_custom")
+    async def custom_range(callback: CallbackQuery, state: FSMContext):
+        await show_start_calendar(callback, state)
+        await callback.answer()
+
+    @dp.callback_query(SimpleCalendarCallback.filter())
+    async def process_calendar_callback(callback: CallbackQuery, callback_data: SimpleCalendarCallback,
+                                        state: FSMContext):
+        await process_calendar(callback, callback_data, state)
+        await callback.answer()

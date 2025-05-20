@@ -147,3 +147,51 @@ def register_history_editor_handlers(dp):
     @dp.callback_query(simple_cal_callback.filter())
     async def on_calendar_select(callback: CallbackQuery, callback_data: dict, state: FSMContext):
         await process_calendar(callback, callback_data, state, show_expense_history_for_range)
+
+    async def show_expense_history_for_range(callback: CallbackQuery, start_date: date, end_date: date):
+        async with async_session() as session:
+            result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+            user = result.scalar()
+
+            if not user:
+                await callback.message.answer("❌ User not found. Use /start.")
+                return
+
+            result = await session.execute(
+                select(DailyExpense, ExpenseCategory.name)
+                .join(ExpenseCategory, DailyExpense.category_id == ExpenseCategory.id)
+                .where(
+                    DailyExpense.user_id == user.id,
+                    func.date(DailyExpense.created_at) >= start_date,
+                    func.date(DailyExpense.created_at) <= end_date
+                )
+            )
+            rows = result.all()
+
+        if not rows:
+            await callback.message.answer("📭 No expenses found from "
+                                          f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}.")
+            return
+
+        grouped = defaultdict(list)
+        for expense, category_name in rows:
+            grouped[expense.created_at.date()].append((expense, category_name))
+
+        await callback.message.answer(
+            f"✏️ Editing expenses from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}:"
+        )
+
+        for date_key in sorted(grouped.keys(), reverse=True):
+            await callback.message.answer(f"📅 {date_key.strftime('%Y-%m-%d')}")
+            for e, cat_name in grouped[date_key]:
+                text = f"• {cat_name} — €{e.amount:.2f}"
+                if e.comment:
+                    text += f" ({e.comment})"
+
+                buttons = InlineKeyboardMarkup(inline_keyboard=[
+                    [
+                        InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_daily_{e.id}"),
+                        InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_daily_{e.id}")
+                    ]
+                ])
+                await callback.message.answer(text, reply_markup=buttons)

@@ -151,9 +151,9 @@ def register_history_editor_handlers(dp):
 
     @dp.callback_query(F.data.startswith("SCD"))
     async def on_calendar_select(callback: CallbackQuery, state: FSMContext):
+        print(f"📅 Received raw callback: {callback.data}")
         from custom_calendar import process_calendar
         callback_data = SimpleCalendarCallback.unpack(callback.data)  # ✅ РАСПАКОВКА!
-        print(f"📅 Calendar callback triggered: {callback.data}")
         await process_calendar(callback, callback_data, state, show_expense_history_for_range)
         await callback.answer()
 

@@ -3,7 +3,6 @@ from aiogram_calendar import SimpleCalendar
 from aiogram.fsm.context import FSMContext
 from datetime import date
 from keyboards import main_menu
-from history_editor import show_expense_history_for_range
 
 async def show_start_calendar(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text("📅 Select the **start date**:")
@@ -17,7 +16,7 @@ async def show_end_calendar(callback: CallbackQuery, state: FSMContext):
     await state.update_data(calendar_stage="end")
 
 
-async def process_calendar(callback: CallbackQuery, callback_data: dict, state: FSMContext, handler):
+async def process_calendar(callback: CallbackQuery, callback_data: dict, state: FSMContext, handler_fn):
     selected, selected_date = await SimpleCalendar().process_selection(callback, callback_data)
 
     if selected:
@@ -38,4 +37,5 @@ async def process_calendar(callback: CallbackQuery, callback_data: dict, state: 
                 return
 
             await state.clear()
-            await handler(callback, start_date, end_date)
+            await handler_fn(callback, start_date, end_date)
+

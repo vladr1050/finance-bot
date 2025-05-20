@@ -5,14 +5,24 @@ from datetime import date
 from keyboards import main_menu
 
 async def show_start_calendar(callback: CallbackQuery, state: FSMContext):
+    calendar = await SimpleCalendar().start_calendar()
+    calendar.inline_keyboard.append([
+        InlineKeyboardButton(text="📅 Today", callback_data="calendar_today"),
+        InlineKeyboardButton(text="❌ Cancel", callback_data="calendar_cancel")
+    ])
     await callback.message.edit_text("📅 Select the **start date**:")
-    await callback.message.edit_reply_markup(reply_markup=await SimpleCalendar().start_calendar())
+    await callback.message.edit_reply_markup(reply_markup=calendar)
     await state.update_data(calendar_stage="start")
 
 
 async def show_end_calendar(callback: CallbackQuery, state: FSMContext):
+    calendar = await SimpleCalendar().start_calendar()
+    calendar.inline_keyboard.append([
+        InlineKeyboardButton(text="📅 Today", callback_data="calendar_today"),
+        InlineKeyboardButton(text="❌ Cancel", callback_data="calendar_cancel")
+    ])
     await callback.message.edit_text("📅 Select the **end date**:")
-    await callback.message.edit_reply_markup(reply_markup=await SimpleCalendar().start_calendar())
+    await callback.message.edit_reply_markup(reply_markup=calendar)
     await state.update_data(calendar_stage="end")
 
 async def process_calendar(callback: CallbackQuery, callback_data: dict, state: FSMContext, handler_fn):

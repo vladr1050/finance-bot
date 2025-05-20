@@ -6,7 +6,7 @@ from aiogram.fsm.state import State, StatesGroup
 from sqlalchemy import select
 from db.database import async_session
 from db.models import User, SavingsBalance
-from keyboards import main_menu, savings_menu
+from keyboards import main_menu, savings_menu, cancel_keyboard
 from bot_setup import dp
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class SetSavings(StatesGroup):
 @dp.callback_query(F.data == "set_savings")
 async def ask_savings_amount(callback: CallbackQuery, state: FSMContext):
     await state.set_state(SetSavings.waiting_for_amount)
-    await callback.message.answer("💰 How much would you like to save each month (EUR)?")
+    await callback.message.answer("💰 How much would you like to save each month (EUR)?", reply_markup=cancel_keyboard())
     await callback.answer()
 
 @dp.message(SetSavings.waiting_for_amount)
@@ -128,3 +128,12 @@ async def process_savings_amount(message: Message, state: FSMContext):
         reply_markup=main_menu()
     )
     await state.clear()
+
+    from aiogram import F
+
+    @dp.callback_query(F.data == "cancel")
+    async def cancel_savings_input(callback: CallbackQuery, state: FSMContext):
+        await state.clear()
+        await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
+        await callback.answer()
+

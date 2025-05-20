@@ -11,7 +11,7 @@ from states import EditDailyExpense
 from keyboards import main_menu
 
 from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
-from custom_calendar import show_start_calendar, process_calendar
+from custom_calendar import show_start_calendar, process_calendar, cancel_calendar
 
 def register_history_editor_handlers(dp):
     @dp.callback_query(F.data == "view_history")
@@ -50,7 +50,8 @@ def register_history_editor_handlers(dp):
             grouped[expense.created_at.date()].append((expense, category_name))
 
         sorted_days = sorted(grouped.keys(), reverse=True)
-        messages = []
+        chunks = []
+        chunk = ""
 
         for d in sorted_days:
             lines = [f"📅 {d.strftime('%Y-%m-%d')}"]
@@ -60,19 +61,31 @@ def register_history_editor_handlers(dp):
                 lines.append(f"• {cat_name} — €{e.amount:.2f}{comment}")
                 total += e.amount
             lines.append(f"💰 Total: €{total:.2f}")
-            messages.append("\n".join(lines))
+            section = "\n".join(lines)
 
-        text = "\n\n".join(messages)
+            if len(chunk) + len(section) + 2 > 4096:
+                chunks.append(chunk)
+                chunk = section
+            else:
+                chunk += f"\n\n{section}" if chunk else section
+
+        if chunk:
+            chunks.append(chunk)
+
+        for part in chunks:
+            await callback.message.answer(part)
+
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="📆 Show custom range", callback_data="view_range_custom")],
             [InlineKeyboardButton(text="✏️ Edit Expenses", callback_data="edit_history")],
             [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
         ])
-        await callback.message.answer(text, reply_markup=keyboard)
+        await callback.message.answer("🔽 What next?", reply_markup=keyboard)
         await callback.answer()
 
     @dp.callback_query(F.data == "edit_history")
     async def handle_edit_history(callback: CallbackQuery, state: FSMContext):
+        await state.update_data(view_mode="edit")
         await show_start_calendar(callback, state)
         await callback.answer()
 
@@ -147,6 +160,7 @@ def register_history_editor_handlers(dp):
 
     @dp.callback_query(F.data == "edit_range_custom")
     async def custom_range(callback: CallbackQuery, state: FSMContext):
+        await state.update_data(view_mode="edit")
         await show_start_calendar(callback, state)
         await callback.answer()
 
@@ -154,70 +168,109 @@ def register_history_editor_handlers(dp):
     async def on_calendar_select(callback: CallbackQuery, state: FSMContext):
         print(f"📅 Received raw callback: {callback.data}")
         from custom_calendar import process_calendar
-        callback_data = SimpleCalendarCallback.unpack(callback.data)  # ✅ РАСПАКОВКА!
-        await process_calendar(callback, callback_data, state, show_expense_history_for_range)
+        callback_data = SimpleCalendarCallback.unpack(callback.data)
+        data = await state.get_data()
+        edit_mode = data.get("view_mode") == "edit"
+        await process_calendar(callback, callback_data, state, lambda cb, s, e: show_expense_history_for_range(cb, s, e, edit_mode))
         await callback.answer()
 
     @dp.callback_query(F.data == "view_range_custom")
     async def custom_view_range(callback: CallbackQuery, state: FSMContext):
-        await state.update_data(view_mode="view")  # 🆕
+        await state.update_data(view_mode="view")
         await show_start_calendar(callback, state)
         await callback.answer()
 
-async def show_expense_history_for_range(callback: CallbackQuery, start_date: date, end_date: date, edit_mode: bool = False):
-        async with async_session() as session:
-            result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
-            user = result.scalar()
+    @dp.callback_query(F.data == "cancel")
+    async def cancel_range(callback: CallbackQuery, state: FSMContext):
+        await state.clear()
+        await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
+        await callback.answer()
 
-            if not user:
-                await callback.message.answer("❌ User not found. Use /start.")
+    @dp.callback_query(F.data == "calendar_cancel")
+    async def cancel_calendar(callback: CallbackQuery, state: FSMContext):
+        await state.clear()
+        await callback.message.edit_text("❌ Calendar cancelled.", reply_markup=main_menu())
+        await callback.answer()
+
+    @dp.callback_query(F.data == "calendar_today")
+    async def select_today(callback: CallbackQuery, state: FSMContext):
+        today = date.today()
+        data = await state.get_data()
+        stage = data.get("calendar_stage")
+
+        if stage == "start":
+            await state.update_data(start_date=today)
+            await show_end_calendar(callback, state)
+        elif stage == "end":
+            start_date = data.get("start_date")
+            end_date = today
+
+            if not start_date or start_date > end_date:
+                await callback.message.answer("❌ Invalid date range. Start must be before End.", reply_markup=main_menu())
+                await state.clear()
                 return
 
-            result = await session.execute(
-                select(DailyExpense, ExpenseCategory.name)
-                .join(ExpenseCategory, DailyExpense.category_id == ExpenseCategory.id)
-                .where(
-                    DailyExpense.user_id == user.id,
-                    func.date(DailyExpense.created_at) >= start_date,
-                    func.date(DailyExpense.created_at) <= end_date
-                )
-            )
-            rows = result.all()
+            await state.clear()
+            view_mode = data.get("view_mode")
+            edit_mode = view_mode == "edit"
+            await show_expense_history_for_range(callback, start_date, end_date, edit_mode)
 
-        if not rows:
-            await callback.message.answer("📭 No expenses found from "
-                                          f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}.")
+        await callback.answer()
+
+async def show_expense_history_for_range(callback: CallbackQuery, start_date: date, end_date: date, edit_mode: bool = False):
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = result.scalar()
+
+        if not user:
+            await callback.message.answer("❌ User not found. Use /start.")
             return
 
-        grouped = defaultdict(list)
-        for expense, category_name in rows:
-            grouped[expense.created_at.date()].append((expense, category_name))
-
-        await callback.message.answer(
-            f"{'✏️ Editing' if edit_mode else '📖 Viewing'} expenses from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}:"
+        result = await session.execute(
+            select(DailyExpense, ExpenseCategory.name)
+            .join(ExpenseCategory, DailyExpense.category_id == ExpenseCategory.id)
+            .where(
+                DailyExpense.user_id == user.id,
+                func.date(DailyExpense.created_at) >= start_date,
+                func.date(DailyExpense.created_at) <= end_date
+            )
         )
+        rows = result.all()
 
-        for date_key in sorted(grouped.keys(), reverse=True):
-            await callback.message.answer(f"📅 {date_key.strftime('%Y-%m-%d')}")
-            for e, cat_name in grouped[date_key]:
-                text = f"• {cat_name} — €{e.amount:.2f}"
-                if e.comment:
-                    text += f" ({e.comment})"
+    if not rows:
+        await callback.message.answer("📭 No expenses found from "
+                                      f"{start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+        return
 
-                if edit_mode:
-                    buttons = InlineKeyboardMarkup(inline_keyboard=[
-                        [
-                            InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_daily_{e.id}"),
-                            InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_daily_{e.id}")
-                        ]
-                    ])
-                    await callback.message.answer(text, reply_markup=buttons)
-                else:
-                    await callback.message.answer(text)
+    grouped = defaultdict(list)
+    for expense, category_name in rows:
+        grouped[expense.created_at.date()].append((expense, category_name))
 
-        if not edit_mode:
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔁 Back to calendar", callback_data="view_range_custom")],
-                [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
-            ])
-            await callback.message.answer("🔽 What next?", reply_markup=keyboard)
+    await callback.message.answer(
+        f"{'✏️ Editing' if edit_mode else '📖 Viewing'} expenses from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}:"
+    )
+
+    for date_key in sorted(grouped.keys(), reverse=True):
+        await callback.message.answer(f"📅 {date_key.strftime('%Y-%m-%d')}")
+        for e, cat_name in grouped[date_key]:
+            text = f"• {cat_name} — €{e.amount:.2f}"
+            if e.comment:
+                text += f" ({e.comment})"
+
+            if edit_mode:
+                buttons = InlineKeyboardMarkup(inline_keyboard=[
+                    [
+                        InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_daily_{e.id}"),
+                        InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_daily_{e.id}")
+                    ]
+                ])
+                await callback.message.answer(text, reply_markup=buttons)
+            else:
+                await callback.message.answer(text)
+
+    if not edit_mode:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔁 Back to calendar", callback_data="view_range_custom")],
+            [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
+        ])
+        await callback.message.answer("🔽 What next?", reply_markup=keyboard)

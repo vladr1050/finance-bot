@@ -11,7 +11,7 @@ from states import EditDailyExpense
 from keyboards import main_menu
 
 from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
-from calendar import show_start_calendar, process_calendar
+from custom_calendar import show_start_calendar, process_calendar
 
 def register_history_editor_handlers(dp):
     @dp.callback_query(F.data == "view_history")

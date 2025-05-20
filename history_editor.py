@@ -9,6 +9,7 @@ from db.models import User, DailyExpense, ExpenseCategory
 from db.database import async_session
 from states import EditDailyExpense
 from keyboards import main_menu
+from functools import partial
 
 from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
 from custom_calendar import show_start_calendar, process_calendar, show_end_calendar
@@ -170,7 +171,8 @@ def register_history_editor_handlers(dp):
         callback_data = SimpleCalendarCallback.unpack(callback.data)
         data = await state.get_data()
         edit_mode = data.get("view_mode") == "edit"
-        await process_calendar(callback, callback_data, state, lambda cb, s, e: show_expense_history_for_range(cb, s, e, edit_mode))
+        handler = partial(show_expense_history_for_range, edit_mode=edit_mode)
+        await process_calendar(callback, callback_data, state, handler)
         await callback.answer()
 
     @dp.callback_query(F.data == "view_range_custom")

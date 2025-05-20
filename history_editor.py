@@ -64,6 +64,7 @@ def register_history_editor_handlers(dp):
 
         text = "\n\n".join(messages)
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📆 Show custom range", callback_data="view_range_custom")],
             [InlineKeyboardButton(text="✏️ Edit Expenses", callback_data="edit_history")],
             [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
         ])
@@ -157,6 +158,12 @@ def register_history_editor_handlers(dp):
         await process_calendar(callback, callback_data, state, show_expense_history_for_range)
         await callback.answer()
 
+    @dp.callback_query(F.data == "view_range_custom")
+    async def custom_view_range(callback: CallbackQuery, state: FSMContext):
+        await state.update_data(view_mode="view")  # 🆕
+        await show_start_calendar(callback, state)
+        await callback.answer()
+
 async def show_expense_history_for_range(callback: CallbackQuery, start_date: date, end_date: date):
         async with async_session() as session:
             result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
@@ -187,7 +194,7 @@ async def show_expense_history_for_range(callback: CallbackQuery, start_date: da
             grouped[expense.created_at.date()].append((expense, category_name))
 
         await callback.message.answer(
-            f"✏️ Editing expenses from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}:"
+            f"{'✏️ Editing' if edit_mode else '📖 Viewing'} expenses from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}:"
         )
 
         for date_key in sorted(grouped.keys(), reverse=True):
@@ -197,10 +204,20 @@ async def show_expense_history_for_range(callback: CallbackQuery, start_date: da
                 if e.comment:
                     text += f" ({e.comment})"
 
-                buttons = InlineKeyboardMarkup(inline_keyboard=[
-                    [
-                        InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_daily_{e.id}"),
-                        InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_daily_{e.id}")
-                    ]
-                ])
-                await callback.message.answer(text, reply_markup=buttons)
+                if edit_mode:
+                    buttons = InlineKeyboardMarkup(inline_keyboard=[
+                        [
+                            InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_daily_{e.id}"),
+                            InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_daily_{e.id}")
+                        ]
+                    ])
+                    await callback.message.answer(text, reply_markup=buttons)
+                else:
+                    await callback.message.answer(text)
+
+        if not edit_mode:
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔁 Back to calendar", callback_data="view_range_custom")],
+                [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
+            ])
+            await callback.message.answer("🔽 What next?", reply_markup=keyboard)

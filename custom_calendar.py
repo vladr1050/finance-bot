@@ -22,6 +22,8 @@ async def process_calendar(callback: CallbackQuery, callback_data: dict, state: 
     if selected:
         data = await state.get_data()
         stage = data.get("calendar_stage")
+        print(f"📍 Calendar stage: {stage}")
+        print(f"📍 Selected date: {selected_date}")
 
         if stage == "start":
             await state.update_data(start_date=selected_date)
@@ -38,4 +40,5 @@ async def process_calendar(callback: CallbackQuery, callback_data: dict, state: 
 
             await state.clear()
             await handler_fn(callback, start_date, end_date)
+
 

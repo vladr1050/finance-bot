@@ -28,7 +28,7 @@ from bot_setup import bot, dp
 from savings import *
 from admin import *
 from utils import deduct_from_savings_if_needed
-from history_editor import register_history_editor_handlers
+from history_editor import register_history_editor_handlers, show_expense_history_for_range
 from category_grouping import register_category_group_handlers
 register_category_group_handlers(dp)
 register_history_editor_handlers(dp)
@@ -247,7 +247,7 @@ async def get_fixed_amount(message: Message, state: FSMContext):
 @dp.callback_query(F.data == "report")
 async def cb_report(callback: CallbackQuery):
     from datetime import date
-    from calendar import monthrange
+    from custom_calendar import monthrange
 
     today = date.today()
     first_day_of_month = today.replace(day=1)

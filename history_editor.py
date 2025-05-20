@@ -144,8 +144,6 @@ def register_history_editor_handlers(dp):
         await show_start_calendar(callback, state)
         await callback.answer()
 
-    @dp.callback_query(SimpleCalendarCallback.filter())
-    async def process_calendar_callback(callback: CallbackQuery, callback_data: SimpleCalendarCallback,
-                                        state: FSMContext):
-        await process_calendar(callback, callback_data, state)
-        await callback.answer()
+    @dp.callback_query(simple_cal_callback.filter())
+    async def on_calendar_select(callback: CallbackQuery, callback_data: dict, state: FSMContext):
+        await process_calendar(callback, callback_data, state, show_expense_history_for_range)

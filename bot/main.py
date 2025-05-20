@@ -247,7 +247,7 @@ async def get_fixed_amount(message: Message, state: FSMContext):
 @dp.callback_query(F.data == "report")
 async def cb_report(callback: CallbackQuery):
     from datetime import date
-    from custom_calendar import monthrange
+    from calendar import monthrange
 
     today = date.today()
     first_day_of_month = today.replace(day=1)

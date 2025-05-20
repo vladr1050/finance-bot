@@ -1,5 +1,5 @@
 from aiogram.types import CallbackQuery
-from aiogram_calendar import SimpleCalendar, simple_cal_callback
+from aiogram_calendar import SimpleCalendar
 from aiogram.fsm.context import FSMContext
 from datetime import date
 from keyboards import main_menu

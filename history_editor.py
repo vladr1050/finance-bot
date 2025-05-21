@@ -151,26 +151,43 @@ def register_history_editor_handlers(dp):
             return
 
         data = await state.get_data()
+        editing_id = data.get("editing_id")
+        if not editing_id:
+            await message.answer("⚠️ No expense selected to edit. Please try again.")
+            await state.clear()
+            return
+
         async with async_session() as session:
-            expense = await session.get(DailyExpense, data["editing_id"])
+            expense = await session.get(DailyExpense, editing_id)
             if expense:
                 expense.amount = new_amount
                 await session.commit()
+                await message.answer("✅ Amount updated.", reply_markup=main_menu())
+            else:
+                await message.answer("❌ Expense not found.")
 
-        await message.answer("✅ Amount updated.", reply_markup=main_menu())
         await state.clear()
 
     @dp.message(EditDailyExpense.editing_comment)
     async def update_daily_comment(message: Message, state: FSMContext):
         new_comment = message.text.strip()
         data = await state.get_data()
+        editing_id = data.get("editing_id")
+
+        if not editing_id:
+            await message.answer("⚠️ No expense selected to edit. Please try again.")
+            await state.clear()
+            return
+
         async with async_session() as session:
-            expense = await session.get(DailyExpense, data["editing_id"])
+            expense = await session.get(DailyExpense, editing_id)
             if expense:
                 expense.comment = new_comment
                 await session.commit()
+                await message.answer("✅ Comment updated.", reply_markup=main_menu())
+            else:
+                await message.answer("❌ Expense not found.")
 
-        await message.answer("✅ Comment updated.", reply_markup=main_menu())
         await state.clear()
 
     @dp.callback_query(F.data == "edit_range_custom")

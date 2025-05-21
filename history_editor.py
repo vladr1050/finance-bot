@@ -194,14 +194,24 @@ def register_history_editor_handlers(dp):
         data = await state.get_data()
         message_ids = data.get("view_messages", [])
 
+        # Удаляем все сохранённые сообщения
         for msg_id in message_ids:
             try:
                 await callback.bot.delete_message(callback.message.chat.id, msg_id)
             except:
                 pass
 
+        # Отдельно удаляем текущее сообщение с кнопкой, если оно не было в списке
+        try:
+            if callback.message.message_id not in message_ids:
+                await callback.bot.delete_message(callback.message.chat.id, callback.message.message_id)
+        except:
+            pass
+
         await state.clear()
-        await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
+
+        # Отправляем главное меню как новое сообщение
+        await callback.message.answer("❌ Cancelled.", reply_markup=main_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "calendar_today")

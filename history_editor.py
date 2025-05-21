@@ -1,5 +1,5 @@
 from aiogram import F
-from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton, Chat
+from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, func
 from collections import defaultdict
@@ -13,16 +13,6 @@ from functools import partial
 
 from aiogram_calendar import SimpleCalendar, SimpleCalendarCallback
 from custom_calendar import show_start_calendar, process_calendar, show_end_calendar
-
-import logging
-logger = logging.getLogger(__name__)
-from bot_setup import bot
-
-async def send_debug(chat_id: int, text: str):
-    try:
-        await bot.send_message(chat_id, f"[DEBUG] {text}")
-    except Exception:
-        pass
 
 def register_history_editor_handlers(dp):
     @dp.callback_query(F.data == "view_history")
@@ -100,6 +90,12 @@ def register_history_editor_handlers(dp):
         message_ids.append(menu_msg.message_id)
 
         await state.update_data(view_messages=message_ids)
+        await callback.answer()
+
+    @dp.callback_query(F.data == "cancel")
+    async def cancel_range(callback: CallbackQuery, state: FSMContext):
+        await state.clear()
+        await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
         await callback.answer()
 
     @dp.callback_query(F.data == "edit_history")
@@ -185,7 +181,6 @@ def register_history_editor_handlers(dp):
 
     @dp.callback_query(F.data.startswith("simple_calendar:DAY:"))
     async def on_calendar_select(callback: CallbackQuery, state: FSMContext):
-        print(f"📅 Received raw callback: {callback.data}")
         callback_data = SimpleCalendarCallback.unpack(callback.data)
         data = await state.get_data()
         edit_mode = data.get("view_mode") == "edit"
@@ -197,36 +192,6 @@ def register_history_editor_handlers(dp):
     async def custom_view_range(callback: CallbackQuery, state: FSMContext):
         await state.update_data(view_mode="view")
         await show_start_calendar(callback, state)
-        await callback.answer()
-
-    @dp.callback_query(F.data == "cancel")
-    async def cancel_range(callback: CallbackQuery, state: FSMContext):
-        data = await state.get_data()
-        message_ids = data.get("view_messages", [])
-        deleted_count = 0
-
-        await send_debug(callback.from_user.id, f"🚨 CANCEL: deleting {len(message_ids)} messages")
-
-        for msg_id in message_ids:
-            try:
-                await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg_id)
-                deleted_count += 1
-            except:
-                pass
-
-        if callback.message.message_id not in message_ids:
-            try:
-                await callback.bot.delete_message(chat_id=callback.message.chat.id,
-                                                  message_id=callback.message.message_id)
-                deleted_count += 1
-            except:
-                pass
-
-        await state.clear()
-
-        msg = await callback.message.answer("❌ Cancelled.", reply_markup=main_menu())
-        await send_debug(callback.from_user.id, f"✅ Deleted {deleted_count} messages, new main menu = {msg.message_id}")
-
         await callback.answer()
 
     @dp.callback_query(F.data == "calendar_today")
@@ -294,7 +259,6 @@ async def show_expense_history_for_range(callback: CallbackQuery, start_date: da
     )
 
     if not edit_mode:
-        # Normal view mode (chunked)
         chunks = []
         chunk = ""
 
@@ -318,7 +282,6 @@ async def show_expense_history_for_range(callback: CallbackQuery, start_date: da
             await callback.message.answer(part)
 
     else:
-        # Edit mode (each row with buttons)
         for d in sorted(grouped.keys(), reverse=True):
             await callback.message.answer(f"📅 {d.strftime('%Y-%m-%d')}")
             for e, cat_name in grouped[d]:
@@ -337,10 +300,3 @@ async def show_expense_history_for_range(callback: CallbackQuery, start_date: da
         [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
     ])
     await callback.message.answer("🔽 What next?", reply_markup=keyboard)
-
-async def send_debug(chat_id, text):
-    try:
-        from bot_setup import bot
-        await bot.send_message(chat_id, f"[DEBUG]\n{text}")
-    except Exception as e:
-        print(f"Telegram log send failed: {e}")

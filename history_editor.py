@@ -191,30 +191,43 @@ def register_history_editor_handlers(dp):
 
     @dp.callback_query(F.data == "cancel")
     async def cancel_range(callback: CallbackQuery, state: FSMContext):
-        print("🚨 CANCEL triggered")
+        print("🧪 CANCEL triggered")
 
         data = await state.get_data()
         message_ids = data.get("view_messages", [])
 
+        print(f"➡️ Saved message_ids to delete: {message_ids}")
+        print(f"➡️ Current callback.message_id: {callback.message.message_id}")
+
+        deleted_count = 0
+
         # Удаляем все сохраненные сообщения
         for msg_id in message_ids:
             try:
+                print(f"🔄 Trying to delete message: {msg_id}")
                 await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg_id)
+                deleted_count += 1
             except Exception as e:
-                print(f"⚠️ Can't delete message {msg_id}: {e}")
+                print(f"⚠️ Error deleting message {msg_id}: {e}")
 
-        # Удаляем текущее сообщение, если оно не было в списке
+        # Удаляем нажатое сообщение, если оно не было в списке
         if callback.message.message_id not in message_ids:
             try:
+                print(f"🔄 Deleting callback.message: {callback.message.message_id}")
                 await callback.bot.delete_message(chat_id=callback.message.chat.id,
                                                   message_id=callback.message.message_id)
+                deleted_count += 1
             except Exception as e:
-                print(f"⚠️ Can't delete callback.message: {e}")
+                print(f"⚠️ Error deleting callback.message: {e}")
+
+        print(f"✅ Deleted {deleted_count} messages.")
 
         await state.clear()
 
-        # Отправляем новое сообщение с меню
-        await callback.message.answer("❌ Cancelled.", reply_markup=main_menu())
+        # Отправляем новое сообщение с главным меню
+        msg = await callback.message.answer("❌ Cancelled.", reply_markup=main_menu())
+        print(f"📩 Sent new main menu message: {msg.message_id}")
+
         await callback.answer()
 
     @dp.callback_query(F.data == "calendar_today")

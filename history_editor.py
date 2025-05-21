@@ -241,31 +241,38 @@ async def show_expense_history_for_range(callback: CallbackQuery, start_date: da
     for expense, category_name in rows:
         grouped[expense.created_at.date()].append((expense, category_name))
 
+    # Header
     await callback.message.answer(
         f"{'✏️ Editing' if edit_mode else '📖 Viewing'} expenses from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}:"
     )
 
-    for date_key in sorted(grouped.keys(), reverse=True):
-        await callback.message.answer(f"📅 {date_key.strftime('%Y-%m-%d')}")
-        for e, cat_name in grouped[date_key]:
-            text = f"• {cat_name} — €{e.amount:.2f}"
-            if e.comment:
-                text += f" ({e.comment})"
+    # Build and split messages
+    chunks = []
+    chunk = ""
 
-            if edit_mode:
-                buttons = InlineKeyboardMarkup(inline_keyboard=[
-                    [
-                        InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_daily_{e.id}"),
-                        InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_daily_{e.id}")
-                    ]
-                ])
-                await callback.message.answer(text, reply_markup=buttons)
-            else:
-                await callback.message.answer(text)
+    for d in sorted(grouped.keys(), reverse=True):
+        lines = [f"📅 {d.strftime('%Y-%m-%d')}"]
+        for e, cat_name in grouped[d]:
+            comment = f" ({e.comment})" if e.comment else ""
+            lines.append(f"• {cat_name} — €{e.amount:.2f}{comment}")
+        section = "\n".join(lines)
 
-    if not edit_mode:
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🔁 Back to calendar", callback_data="view_range_custom")],
-            [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
-        ])
-        await callback.message.answer("🔽 What next?", reply_markup=keyboard)
+        if len(chunk) + len(section) + 2 > 4096:
+            chunks.append(chunk)
+            chunk = section
+        else:
+            chunk += f"\n\n{section}" if chunk else section
+
+    if chunk:
+        chunks.append(chunk)
+
+    for part in chunks:
+        await callback.message.answer(part)
+
+    # Footer navigation
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔁 Back to calendar", callback_data="view_range_custom")],
+        [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
+    ])
+    await callback.message.answer("🔽 What next?", reply_markup=keyboard)
+

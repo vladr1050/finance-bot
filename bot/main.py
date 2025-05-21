@@ -324,7 +324,7 @@ async def cb_report(callback: CallbackQuery):
 # ----- DAILY EXPENSE ENTRY -----
 
 # ✅ VIEW HISTORY (corrected)
-@dp.callback_query(F.data == "view_history")
+#@dp.callback_query(F.data == "view_history")
 async def view_expense_history(callback: CallbackQuery):
     today = datetime.utcnow().date()
     start_date = today - timedelta(days=9)

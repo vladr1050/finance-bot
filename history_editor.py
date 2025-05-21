@@ -16,9 +16,9 @@ from custom_calendar import show_start_calendar, process_calendar, show_end_cale
 
 def register_history_editor_handlers(dp):
     @dp.callback_query(F.data == "view_history")
-    async def view_expense_history(callback: CallbackQuery):
+    async def view_expense_history(callback: CallbackQuery, state: FSMContext):
         today = datetime.utcnow().date()
-        start_date = today - timedelta(days=9)
+        start_date = today - timedelta(days=2)
 
         async with async_session() as session:
             result = await session.execute(
@@ -53,6 +53,7 @@ def register_history_editor_handlers(dp):
         sorted_days = sorted(grouped.keys(), reverse=True)
         chunks = []
         chunk = ""
+        message_ids = []
 
         for d in sorted_days:
             lines = [f"📅 {d.strftime('%Y-%m-%d')}"]
@@ -74,7 +75,8 @@ def register_history_editor_handlers(dp):
             chunks.append(chunk)
 
         for part in chunks:
-            await callback.message.answer(part)
+            msg = await callback.message.answer(part)
+            message_ids.append(msg.message_id)
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="📆 Show custom range", callback_data="view_range_custom")],
@@ -84,8 +86,10 @@ def register_history_editor_handlers(dp):
                 InlineKeyboardButton(text="❌ Cancel", callback_data="cancel")
             ]
         ])
+        menu_msg = await callback.message.answer("🔽 What next?", reply_markup=keyboard)
+        message_ids.append(menu_msg.message_id)
 
-        await callback.message.answer("🔽 What next?", reply_markup=keyboard)
+        await state.update_data(view_messages=message_ids)
         await callback.answer()
 
     @dp.callback_query(F.data == "edit_history")
@@ -187,6 +191,15 @@ def register_history_editor_handlers(dp):
 
     @dp.callback_query(F.data == "cancel")
     async def cancel_range(callback: CallbackQuery, state: FSMContext):
+        data = await state.get_data()
+        message_ids = data.get("view_messages", [])
+
+        for msg_id in message_ids:
+            try:
+                await callback.bot.delete_message(callback.message.chat.id, msg_id)
+            except:
+                pass
+
         await state.clear()
         await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
         await callback.answer()

@@ -1,5 +1,5 @@
 from aiogram import F
-from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton, Chat
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, func
 from collections import defaultdict
@@ -16,6 +16,13 @@ from custom_calendar import show_start_calendar, process_calendar, show_end_cale
 
 import logging
 logger = logging.getLogger(__name__)
+from bot_setup import bot
+
+async def send_debug(chat_id: int, text: str):
+    try:
+        await bot.send_message(chat_id, f"[DEBUG] {text}")
+    except Exception:
+        pass
 
 def register_history_editor_handlers(dp):
     @dp.callback_query(F.data == "view_history")
@@ -194,39 +201,31 @@ def register_history_editor_handlers(dp):
 
     @dp.callback_query(F.data == "cancel")
     async def cancel_range(callback: CallbackQuery, state: FSMContext):
-        logger.info("🧪 CANCEL triggered")
-
         data = await state.get_data()
         message_ids = data.get("view_messages", [])
-
-        logger.info(f"➡️ Saved message_ids to delete: {message_ids}")
-        logger.info(f"➡️ Current callback.message_id: {callback.message.message_id}")
-
         deleted_count = 0
+
+        await send_debug(callback.from_user.id, f"🚨 CANCEL: deleting {len(message_ids)} messages")
 
         for msg_id in message_ids:
             try:
-                logger.info(f"🔄 Trying to delete message: {msg_id}")
                 await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg_id)
                 deleted_count += 1
-            except Exception as e:
-                logger.warning(f"⚠️ Error deleting message {msg_id}: {e}")
+            except:
+                pass
 
         if callback.message.message_id not in message_ids:
             try:
-                logger.info(f"🔄 Deleting callback.message: {callback.message.message_id}")
                 await callback.bot.delete_message(chat_id=callback.message.chat.id,
                                                   message_id=callback.message.message_id)
                 deleted_count += 1
-            except Exception as e:
-                logger.warning(f"⚠️ Error deleting callback.message: {e}")
-
-        logger.info(f"✅ Deleted {deleted_count} messages.")
+            except:
+                pass
 
         await state.clear()
 
         msg = await callback.message.answer("❌ Cancelled.", reply_markup=main_menu())
-        logger.info(f"📩 Sent new main menu message: {msg.message_id}")
+        await send_debug(callback.from_user.id, f"✅ Deleted {deleted_count} messages, new main menu = {msg.message_id}")
 
         await callback.answer()
 
@@ -339,4 +338,9 @@ async def show_expense_history_for_range(callback: CallbackQuery, start_date: da
     ])
     await callback.message.answer("🔽 What next?", reply_markup=keyboard)
 
-
+async def send_debug(chat_id, text):
+    try:
+        from bot_setup import bot
+        await bot.send_message(chat_id, f"[DEBUG]\n{text}")
+    except Exception as e:
+        print(f"Telegram log send failed: {e}")

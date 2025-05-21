@@ -212,6 +212,12 @@ def register_history_editor_handlers(dp):
 
         await callback.answer()
 
+    @dp.callback_query(F.data == "calendar_cancel")
+    async def cancel_calendar(callback: CallbackQuery, state: FSMContext):
+        await state.clear()
+        await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
+        await callback.answer()
+
 async def show_expense_history_for_range(callback: CallbackQuery, start_date: date, end_date: date, edit_mode: bool = False):
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))

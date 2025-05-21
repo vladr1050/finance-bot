@@ -241,38 +241,53 @@ async def show_expense_history_for_range(callback: CallbackQuery, start_date: da
     for expense, category_name in rows:
         grouped[expense.created_at.date()].append((expense, category_name))
 
-    # Header
     await callback.message.answer(
         f"{'✏️ Editing' if edit_mode else '📖 Viewing'} expenses from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}:"
     )
 
-    # Build and split messages
-    chunks = []
-    chunk = ""
+    if not edit_mode:
+        # Normal view mode (chunked)
+        chunks = []
+        chunk = ""
 
-    for d in sorted(grouped.keys(), reverse=True):
-        lines = [f"📅 {d.strftime('%Y-%m-%d')}"]
-        for e, cat_name in grouped[d]:
-            comment = f" ({e.comment})" if e.comment else ""
-            lines.append(f"• {cat_name} — €{e.amount:.2f}{comment}")
-        section = "\n".join(lines)
+        for d in sorted(grouped.keys(), reverse=True):
+            lines = [f"📅 {d.strftime('%Y-%m-%d')}"]
+            for e, cat_name in grouped[d]:
+                comment = f" ({e.comment})" if e.comment else ""
+                lines.append(f"• {cat_name} — €{e.amount:.2f}{comment}")
+            section = "\n".join(lines)
 
-        if len(chunk) + len(section) + 2 > 4096:
+            if len(chunk) + len(section) + 2 > 4096:
+                chunks.append(chunk)
+                chunk = section
+            else:
+                chunk += f"\n\n{section}" if chunk else section
+
+        if chunk:
             chunks.append(chunk)
-            chunk = section
-        else:
-            chunk += f"\n\n{section}" if chunk else section
 
-    if chunk:
-        chunks.append(chunk)
+        for part in chunks:
+            await callback.message.answer(part)
 
-    for part in chunks:
-        await callback.message.answer(part)
+    else:
+        # Edit mode (each row with buttons)
+        for d in sorted(grouped.keys(), reverse=True):
+            await callback.message.answer(f"📅 {d.strftime('%Y-%m-%d')}")
+            for e, cat_name in grouped[d]:
+                comment = f" ({e.comment})" if e.comment else ""
+                text = f"• {cat_name} — €{e.amount:.2f}{comment}"
+                buttons = InlineKeyboardMarkup(inline_keyboard=[
+                    [
+                        InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_daily_{e.id}"),
+                        InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_daily_{e.id}")
+                    ]
+                ])
+                await callback.message.answer(text, reply_markup=buttons)
 
-    # Footer navigation
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔁 Back to calendar", callback_data="view_range_custom")],
         [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
     ])
     await callback.message.answer("🔽 What next?", reply_markup=keyboard)
+
 

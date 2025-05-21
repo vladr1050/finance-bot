@@ -79,8 +79,12 @@ def register_history_editor_handlers(dp):
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="📆 Show custom range", callback_data="view_range_custom")],
             [InlineKeyboardButton(text="✏️ Edit Expenses", callback_data="edit_history")],
-            [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
+            [
+                InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu"),
+                InlineKeyboardButton(text="❌ Cancel", callback_data="cancel")
+            ]
         ])
+
         await callback.message.answer("🔽 What next?", reply_markup=keyboard)
         await callback.answer()
 

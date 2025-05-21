@@ -191,26 +191,29 @@ def register_history_editor_handlers(dp):
 
     @dp.callback_query(F.data == "cancel")
     async def cancel_range(callback: CallbackQuery, state: FSMContext):
+        print("🚨 CANCEL triggered")
+
         data = await state.get_data()
         message_ids = data.get("view_messages", [])
 
-        # Удаляем все сохранённые сообщения
+        # Удаляем все сохраненные сообщения
         for msg_id in message_ids:
             try:
-                await callback.bot.delete_message(callback.message.chat.id, msg_id)
-            except:
-                pass
+                await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg_id)
+            except Exception as e:
+                print(f"⚠️ Can't delete message {msg_id}: {e}")
 
-        # Отдельно удаляем текущее сообщение с кнопкой, если оно не было в списке
-        try:
-            if callback.message.message_id not in message_ids:
-                await callback.bot.delete_message(callback.message.chat.id, callback.message.message_id)
-        except:
-            pass
+        # Удаляем текущее сообщение, если оно не было в списке
+        if callback.message.message_id not in message_ids:
+            try:
+                await callback.bot.delete_message(chat_id=callback.message.chat.id,
+                                                  message_id=callback.message.message_id)
+            except Exception as e:
+                print(f"⚠️ Can't delete callback.message: {e}")
 
         await state.clear()
 
-        # Отправляем главное меню как новое сообщение
+        # Отправляем новое сообщение с меню
         await callback.message.answer("❌ Cancelled.", reply_markup=main_menu())
         await callback.answer()
 

@@ -257,9 +257,6 @@ async def recalculate_current_budget(user_id):
     @dp.callback_query(F.data == "view_adjustments")
     async def view_adjustments_menu(callback: CallbackQuery):
         await callback.message.answer("📋 Showing adjustments history...\nUse /adjustments anytime.")
-        Use / adjustments
-        anytime.
-        ")
         await show_adjustments(callback.message)
         await callback.answer()
 

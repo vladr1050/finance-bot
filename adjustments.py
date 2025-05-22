@@ -286,6 +286,10 @@ async def delete_adj_callback(callback: CallbackQuery):
         await callback.message.edit_text("🗑 Adjustment deleted.")
         await callback.answer()
 
+@dp.callback_query(F.data == "view_adjustments")
+async def view_adjustments_menu(callback: CallbackQuery):
+    await show_adjustments(callback.message)
+    await callback.answer()
 
 # === Register if needed ===
 def register_adjustment_handlers(dp):

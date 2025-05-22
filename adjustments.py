@@ -227,18 +227,19 @@ async def recalc_budget_now(callback: CallbackQuery, state: FSMContext):
 
 # === View Adjustments History ===
 @dp.message(Command("adjustments"))
-async def show_adjustments(message: Message):
+async def show_adjustments(message: Message, user_id: int | None = None):
     async with async_session() as session:
-        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
-        user = result.scalar()
-
-        if not user:
-            await message.answer("❌ User not found. Use /start")
-            return
+        if user_id is None:
+            result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+            user = result.scalar()
+            if not user:
+                await message.answer("❌ User not found. Use /start")
+                return
+            user_id = user.id
 
         result = await session.execute(
             select(MonthlyBudgetAdjustment).where(
-                MonthlyBudgetAdjustment.user_id == user.id
+                MonthlyBudgetAdjustment.user_id == user_id
             ).order_by(MonthlyBudgetAdjustment.created_at.desc()).limit(20)
         )
         adjustments = result.scalars().all()
@@ -262,7 +263,6 @@ async def show_adjustments(message: Message):
                 ]
             )
             await message.answer(text, reply_markup=buttons)
-
 
 @dp.callback_query(F.data.startswith("delete_adj_"))
 async def delete_adj_callback(callback: CallbackQuery):

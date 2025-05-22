@@ -1,6 +1,11 @@
 import sys
 import os
-
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    force=True
+)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import asyncio
 from aiogram import Bot, Dispatcher, types, F

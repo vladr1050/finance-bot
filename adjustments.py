@@ -126,17 +126,8 @@ async def adjustment_choose_permanency(message: Message, state: FSMContext):
 @dp.callback_query(F.data.in_(["perm_yes", "perm_no"]))
 async def finalize_adjustment(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-
-    async with async_session() as session:
-        result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
-        user = result.scalar()
-        if not user:
-            await callback.message.answer("❌ User not found.")
-            await callback.answer()
-            return
-
     await save_adjustment(
-        user_id=user.id,
+        user_id=callback.from_user.id,
         source=data["source"],
         type_=data["adjust_type"],
         amount=data["amount"],
@@ -146,6 +137,7 @@ async def finalize_adjustment(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("✅ Adjustment saved.", reply_markup=main_menu())
     await state.clear()
     await callback.answer()
+
 
 # === Recalculate Budget Flow ===
 @dp.callback_query(F.data == "recalculate_budget")
@@ -178,9 +170,27 @@ async def recalc_budget_now(callback: CallbackQuery, state: FSMContext):
 async def recalculate_current_budget(user_id):
     today = date.today()
     month_start = today.replace(day=1)
-    total_days = (month_start.replace(month=month_start.month % 12 + 1, day=1) - timedelta(days=1)).day
-    days_left = (month_start.replace(month=month_start.month % 12 + 1, day=1) - today).days + 1
-    coefficient = days_left / total_days
+    month_end = month_start.replace(month=month_start.month % 12 + 1, day=1) - timedelta(days=1)
+    total_days = month_end.day
+
+    async with async_session() as session:
+        user = await session.get(User, user_id)
+        income = user.monthly_income or 0
+        savings_goal = user.monthly_savings or 0
+        fixed_total = (await session.execute(select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id))).scalar() or 0
+
+        # Determine actual start date for expenses this month
+        result = await session.execute(
+            select(func.min(DailyExpense.created_at)).where(
+                DailyExpense.user_id == user.id,
+                func.date(DailyExpense.created_at) >= month_start
+            )
+        )
+        first_expense_date = result.scalar()
+        from_date = first_expense_date.date() if first_expense_date else today
+
+        days_left = (month_end - from_date).days + 1
+        coefficient = days_left / total_days if total_days else 1.0
 
     async with async_session() as session:
         user = await session.get(User, user_id)

@@ -1,11 +1,5 @@
 import sys
 import os
-import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    force=True  # ← ключевое!
-)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import asyncio
@@ -24,7 +18,7 @@ from sqlalchemy.orm import joinedload
 from collections import defaultdict
 from datetime import date, timedelta
 from datetime import datetime
-from states import Register, AddFixedExpense, EditExpense, EditIncome, AddDailyExpense, AddCategory
+from states import Register, AddFixedExpense, EditExpense, EditIncome, AddDailyExpense, BudgetAdjustmentFSM, AddCategory
 from keyboards import main_menu, settings_menu, after_expense_menu, skip_keyboard, cancel_keyboard, skip_cancel_keyboard, back_keyboard
 from bot_setup import bot, dp
 from savings import *
@@ -34,6 +28,9 @@ from history_editor import register_history_editor_handlers, show_expense_histor
 from category_grouping import register_category_group_handlers
 register_category_group_handlers(dp)
 register_history_editor_handlers(dp)
+
+from adjustments import register_adjustment_handlers
+register_adjustment_handlers(dp)
 
 # ----- START -----
 
@@ -208,6 +205,8 @@ async def apply_edit(message: Message, state: FSMContext):
     data = await state.get_data()
     expense_id = data.get("editing_id")
     field = data.get("field_to_edit")
+    today = date.today()
+    month_start = today.replace(day=1)
 
     async with async_session() as session:
         expense = await session.get(FixedExpense, expense_id)
@@ -215,31 +214,32 @@ async def apply_edit(message: Message, state: FSMContext):
             await message.answer("Expense not found.")
             return
 
+        old_amount = expense.amount
+
         if field == "name":
             expense.name = message.text
         elif field == "amount":
             try:
-                new_amount = float(message.text.replace(",", "."))
+                new_amount = float(message.text)
             except ValueError:
                 await message.answer("Amount must be a number.")
                 return
-
-            # Вычисляем разницу и обновляем бюджет
-            difference = expense.amount - new_amount
             expense.amount = new_amount
 
+            delta = new_amount - old_amount
             result = await session.execute(
                 select(MonthlyBudget).where(
                     MonthlyBudget.user_id == expense.user_id,
-                    MonthlyBudget.month_start == date.today().replace(day=1)
+                    MonthlyBudget.month_start == month_start
                 )
             )
             budget = result.scalar()
             if budget:
-                budget.fixed -= difference
-                budget.remaining += difference  # Без применения коэффициента
+                budget.fixed += delta
+                budget.remaining -= delta
 
         await session.commit()
+
     await message.answer("✅ Updated and budget recalculated.", reply_markup=main_menu())
     await state.clear()
 
@@ -543,12 +543,6 @@ async def open_settings(callback: CallbackQuery):
 @dp.callback_query(F.data == "back_to_menu")
 async def return_to_main(callback: CallbackQuery):
     await callback.message.edit_text("🏠 Main Menu:", reply_markup=main_menu())
-    await callback.answer()
-
-@dp.callback_query(F.data == "edit_income")
-async def edit_income_start(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(EditIncome.waiting_for_new_income)
-    await callback.message.answer("💰 Enter your new monthly income (EUR):", reply_markup=cancel_keyboard())
     await callback.answer()
 
 @dp.message(EditIncome.waiting_for_new_income)

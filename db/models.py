@@ -54,4 +54,16 @@ class MonthlyBudget(Base):
     coefficient = Column(Float, default=1.0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class MonthlyBudgetAdjustment(Base):
+    __tablename__ = "monthly_budget_adjustments"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    month = Column(DateTime, nullable=False)  # начало месяца
+    source = Column(String, nullable=False)  # 'income', 'fixed_expense', 'savings'
+    type = Column(String, nullable=False)  # 'add' или 'subtract'
+    amount = Column(Float, nullable=False)
+    comment = Column(String, nullable=True)
+    apply_permanently = Column(Integer, default=0)  # 0 = нет, 1 = да
+    processed = Column(Integer, default=0)  # 0 = нет, 1 = да
+    created_at = Column(DateTime, default=datetime.utcnow)
 

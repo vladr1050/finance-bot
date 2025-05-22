@@ -28,3 +28,11 @@ class EditDailyExpense(StatesGroup):
     choosing_field = State()
     editing_amount = State()
     editing_comment = State()
+
+class BudgetAdjustmentFSM(StatesGroup):
+    choosing_operation = State()       # Add / Subtract
+    entering_amount = State()
+    entering_comment = State()
+    choosing_permanency = State()
+    confirm_recalculation = State()
+

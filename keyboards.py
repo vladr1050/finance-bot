@@ -13,7 +13,8 @@ def settings_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💼 Edit Income", callback_data="edit_income")],
         [InlineKeyboardButton(text="📋 Edit Fixed Expenses", callback_data="edit_expense")],
-        [InlineKeyboardButton(text="💰 Set Savings", callback_data="set_savings")],
+        [InlineKeyboardButton(text="💰 Edit Savings Goal", callback_data="set_savings")],
+        [InlineKeyboardButton(text="🔄 Recalculate Budget", callback_data="recalculate_budget")],
         [InlineKeyboardButton(text="⬅️ Back", callback_data="main_menu")]
     ])
 def after_expense_menu():

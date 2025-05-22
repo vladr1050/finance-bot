@@ -270,12 +270,10 @@ async def show_adjustments(message: Message):
             )
             await message.answer(text, reply_markup=buttons)
 
-
 @dp.callback_query(F.data == "view_adjustments")
 async def view_adjustments_menu(callback: CallbackQuery):
-    await show_adjustments(callback.message)
+    await show_adjustments(callback.message, user_id=callback.from_user.id)
     await callback.answer()
-
 
 @dp.callback_query(F.data.startswith("delete_adj_"))
 async def delete_adj_callback(callback: CallbackQuery):

@@ -154,14 +154,33 @@ async def cb_edit_expense(callback: CallbackQuery):
 @dp.callback_query(F.data.startswith("delete_fixed_"))
 async def delete_fixed(callback: CallbackQuery):
     expense_id = int(callback.data.split("_")[-1])
+    today = date.today()
+    month_start = today.replace(day=1)
+
     async with async_session() as session:
         expense = await session.get(FixedExpense, expense_id)
-        if expense:
-            await session.delete(expense)
-            await session.commit()
-            await callback.message.answer("🗑 Expense deleted.", reply_markup=main_menu())
-        else:
+        if not expense:
             await callback.message.answer("Expense not found.")
+            await callback.answer()
+            return
+
+        amount = expense.amount
+        user_id = expense.user_id
+        await session.delete(expense)
+
+        result = await session.execute(
+            select(MonthlyBudget).where(
+                MonthlyBudget.user_id == user_id,
+                MonthlyBudget.month_start == month_start
+            )
+        )
+        budget = result.scalar()
+        if budget:
+            budget.fixed -= amount
+            budget.remaining += amount
+        await session.commit()
+
+    await callback.message.answer("🗑 Expense deleted and budget updated.", reply_markup=main_menu())
     await callback.answer()
 
 @dp.callback_query(F.data.startswith("edit_fixed_"))
@@ -189,21 +208,42 @@ async def apply_edit(message: Message, state: FSMContext):
     data = await state.get_data()
     expense_id = data.get("editing_id")
     field = data.get("field_to_edit")
+    today = date.today()
+    month_start = today.replace(day=1)
+
     async with async_session() as session:
         expense = await session.get(FixedExpense, expense_id)
         if not expense:
             await message.answer("Expense not found.")
             return
+
+        old_amount = expense.amount
+
         if field == "name":
             expense.name = message.text
         elif field == "amount":
             try:
-                expense.amount = float(message.text)
+                new_amount = float(message.text)
             except ValueError:
                 await message.answer("Amount must be a number.")
                 return
+            expense.amount = new_amount
+
+            delta = new_amount - old_amount
+            result = await session.execute(
+                select(MonthlyBudget).where(
+                    MonthlyBudget.user_id == expense.user_id,
+                    MonthlyBudget.month_start == month_start
+                )
+            )
+            budget = result.scalar()
+            if budget:
+                budget.fixed += delta
+                budget.remaining -= delta
+
         await session.commit()
-    await message.answer("✅ Updated.", reply_markup=main_menu())
+
+    await message.answer("✅ Updated and budget recalculated.", reply_markup=main_menu())
     await state.clear()
 
 @dp.callback_query(F.data == "add_expense")
@@ -225,11 +265,14 @@ async def get_fixed_amount(message: Message, state: FSMContext):
     except ValueError:
         await message.answer("Amount must be a number.")
         return
+
     data = await state.get_data()
+    today = date.today()
+    month_start = today.replace(day=1)
+
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
         user = result.scalar()
-
         if not user:
             await message.answer("❌ User not found. Please restart with /start.")
             return
@@ -240,8 +283,20 @@ async def get_fixed_amount(message: Message, state: FSMContext):
             amount=amount
         )
         session.add(fixed)
+
+        result = await session.execute(
+            select(MonthlyBudget).where(
+                MonthlyBudget.user_id == user.id,
+                MonthlyBudget.month_start == month_start
+            )
+        )
+        budget = result.scalar()
+        if budget:
+            budget.fixed += amount
+            budget.remaining -= amount
         await session.commit()
-    await message.answer("✅ Fixed expense saved!", reply_markup=main_menu())
+
+    await message.answer("✅ Fixed expense saved and budget updated!", reply_markup=main_menu())
     await state.clear()
 
 # ----- REPORT -----

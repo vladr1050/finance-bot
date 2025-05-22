@@ -293,7 +293,7 @@ async def cb_report(callback: CallbackQuery):
         # Новый расчёт
         spent = real_spent
         remaining = adjusted_budget - spent
-        daily_budget = remaining / days_left if days_left > 0 else 0
+        daily_budget = max(remaining, 0) / days_left if days_left > 0 else 0  # 🔒 Защита от отрицательных значений
 
         # Баланс накоплений
         result = await session.execute(

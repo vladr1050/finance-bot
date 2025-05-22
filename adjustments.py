@@ -10,6 +10,8 @@ from db.database import async_session
 from states import BudgetAdjustmentFSM
 from keyboards import main_menu
 from bot_setup import dp
+import logging
+logger = logging.getLogger(__name__)
 
 # === Save adjustment ===
 async def save_adjustment(user_id, source, type_, amount, comment, permanent):
@@ -227,22 +229,26 @@ async def recalc_budget_now(callback: CallbackQuery, state: FSMContext):
 
 # === View Adjustments History ===
 @dp.message(Command("adjustments"))
-async def show_adjustments(message: Message, user_id: int | None = None):
+async def show_adjustments(message: Message):
     async with async_session() as session:
-        if user_id is None:
-            result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
-            user = result.scalar()
-            if not user:
-                await message.answer("❌ User not found. Use /start")
-                return
-            user_id = user.id
+        logger.info(f"🔍 Looking up user by telegram_id={message.from_user.id}")
+        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = result.scalar()
 
+        if not user:
+            logger.warning(f"❌ User with telegram_id={message.from_user.id} not found in DB.")
+            await message.answer("❌ User not found. Use /start")
+            return
+
+        logger.info(f"✅ Found user id={user.id}, fetching adjustments...")
         result = await session.execute(
             select(MonthlyBudgetAdjustment).where(
-                MonthlyBudgetAdjustment.user_id == user_id
+                MonthlyBudgetAdjustment.user_id == user.id
             ).order_by(MonthlyBudgetAdjustment.created_at.desc()).limit(20)
         )
         adjustments = result.scalars().all()
+
+        logger.info(f"📦 Retrieved {len(adjustments)} adjustments for user id={user.id}")
 
         if not adjustments:
             await message.answer("📭 No adjustments found.")
@@ -264,14 +270,23 @@ async def show_adjustments(message: Message, user_id: int | None = None):
             )
             await message.answer(text, reply_markup=buttons)
 
+
+@dp.callback_query(F.data == "view_adjustments")
+async def view_adjustments_menu(callback: CallbackQuery):
+    await show_adjustments(callback.message)
+    await callback.answer()
+
+
 @dp.callback_query(F.data.startswith("delete_adj_"))
 async def delete_adj_callback(callback: CallbackQuery):
     adj_id = int(callback.data.split("_")[-1])
     async with async_session() as session:
+        logger.info(f"🗑 Delete request for adjustment_id={adj_id} from telegram_id={callback.from_user.id}")
         result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
         user = result.scalar()
 
         if not user:
+            logger.warning(f"❌ User with telegram_id={callback.from_user.id} not found during deletion.")
             await callback.message.answer("❌ User not found.")
             await callback.answer()
             return
@@ -283,13 +298,10 @@ async def delete_adj_callback(callback: CallbackQuery):
             )
         )
         await session.commit()
+        logger.info(f"✅ Adjustment {adj_id} deleted for user_id={user.id}")
         await callback.message.edit_text("🗑 Adjustment deleted.")
         await callback.answer()
 
-@dp.callback_query(F.data == "view_adjustments")
-async def view_adjustments_menu(callback: CallbackQuery):
-    await show_adjustments(callback.message)
-    await callback.answer()
 
 # === Register if needed ===
 def register_adjustment_handlers(dp):

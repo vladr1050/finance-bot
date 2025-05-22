@@ -208,8 +208,6 @@ async def apply_edit(message: Message, state: FSMContext):
     data = await state.get_data()
     expense_id = data.get("editing_id")
     field = data.get("field_to_edit")
-    today = date.today()
-    month_start = today.replace(day=1)
 
     async with async_session() as session:
         expense = await session.get(FixedExpense, expense_id)
@@ -217,32 +215,31 @@ async def apply_edit(message: Message, state: FSMContext):
             await message.answer("Expense not found.")
             return
 
-        old_amount = expense.amount
-
         if field == "name":
             expense.name = message.text
         elif field == "amount":
             try:
-                new_amount = float(message.text)
+                new_amount = float(message.text.replace(",", "."))
             except ValueError:
                 await message.answer("Amount must be a number.")
                 return
+
+            # Вычисляем разницу и обновляем бюджет
+            difference = expense.amount - new_amount
             expense.amount = new_amount
 
-            delta = new_amount - old_amount
             result = await session.execute(
                 select(MonthlyBudget).where(
                     MonthlyBudget.user_id == expense.user_id,
-                    MonthlyBudget.month_start == month_start
+                    MonthlyBudget.month_start == date.today().replace(day=1)
                 )
             )
             budget = result.scalar()
             if budget:
-                budget.fixed += delta
-                budget.remaining -= delta
+                budget.fixed -= difference
+                budget.remaining += difference  # Без применения коэффициента
 
         await session.commit()
-
     await message.answer("✅ Updated and budget recalculated.", reply_markup=main_menu())
     await state.clear()
 

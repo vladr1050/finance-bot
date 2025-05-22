@@ -55,6 +55,26 @@ async def check_or_create_monthly_budgets():
             )
             fixed_total = result.scalar() or 0.0
 
+            # ⬇️ Apply permanent monthly adjustments if present and unprocessed
+            result = await session.execute(
+                select(MonthlyBudgetAdjustment).where(
+                    MonthlyBudgetAdjustment.user_id == user.id,
+                    MonthlyBudgetAdjustment.month == month_start,
+                    MonthlyBudgetAdjustment.apply_permanently == 1,
+                    MonthlyBudgetAdjustment.processed == 0
+                )
+            )
+            adjustments = result.scalars().all()
+            for adj in adjustments:
+                delta = adj.amount if adj.type == 'add' else -adj.amount
+                if adj.source == "income":
+                    income += delta
+                elif adj.source == "fixed_expense":
+                    fixed_total += delta
+                elif adj.source == "savings":
+                    savings_goal += delta
+                adj.processed = 1  # Mark as used
+
             # Коэффициент применяется только к оставшемуся бюджету
             full_remaining = income - fixed_total - savings_goal
             remaining = full_remaining * coefficient

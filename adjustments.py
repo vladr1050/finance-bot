@@ -233,6 +233,84 @@ async def recalculate_current_budget(user_id):
             budget.coefficient = coefficient
             await session.commit()
 
+    # === Adjustments History ===
+    async def get_user_adjustments(user_id: int, limit: int = 20):
+        async with async_session() as session:
+            result = await session.execute(
+                select(MonthlyBudgetAdjustment).where(
+                    MonthlyBudgetAdjustment.user_id == user_id
+                ).order_by(MonthlyBudgetAdjustment.created_at.desc()).limit(limit)
+            )
+            return result.scalars().all()
+
+    async def delete_adjustment(adjustment_id: int, user_id: int):
+        async with async_session() as session:
+            await session.execute(
+                delete(MonthlyBudgetAdjustment).where(
+                    MonthlyBudgetAdjustment.id == adjustment_id,
+                    MonthlyBudgetAdjustment.user_id == user_id
+                )
+            )
+            await session.commit()
+            logger.info(f"🗑 Adjustment {adjustment_id} deleted for user {user_id}")
+
+    @dp.callback_query(F.data == "view_adjustments")
+    async def view_adjustments_menu(callback: CallbackQuery):
+        await callback.message.answer("📋 Showing adjustments history...
+        Use / adjustments
+        anytime.
+        ")
+        await show_adjustments(callback.message)
+        await callback.answer()
+
+        @ dp.message(Command("adjustments"))
+        async
+
+        def show_adjustments(message: Message):
+            async with async_session() as session:
+                result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+                user = result.scalar()
+
+                if not user:
+                    await message.answer("❌ User not found. Use /start")
+                    return
+
+                adjustments = await get_user_adjustments(user.id)
+                if not adjustments:
+                    await message.answer("📭 No adjustments found.")
+                    return
+
+                for adj in adjustments:
+                    text = (
+                        f"🗓 {adj.month.strftime('%Y-%m')}\n"
+                        f"📌 Source: {adj.source}\n"
+                        f"{('➕' if adj.type == 'add' else '➖')} Amount: €{adj.amount:.2f}\n"
+                        f"📝 {adj.comment or '-'}\n"
+                        f"🔁 Permanent: {'✅' if adj.apply_permanently else '❌'}\n"
+                        f"📦 Processed: {'✅' if adj.processed else '❌'}"
+                    )
+                    buttons = InlineKeyboardMarkup(
+                        inline_keyboard=[
+                            [InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_adj_{adj.id}")]
+                        ]
+                    )
+                    await message.answer(text, reply_markup=buttons)
+
+        @dp.callback_query(F.data.startswith("delete_adj_"))
+        async def delete_adj_callback(callback: CallbackQuery):
+            adj_id = int(callback.data.split("_")[-1])
+            async with async_session() as session:
+                result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+                user = result.scalar()
+
+                if not user:
+                    await callback.message.answer("❌ User not found.")
+                    await callback.answer()
+                    return
+
+                await delete_adjustment(adj_id, user.id)
+                await callback.message.edit_text("🗑 Adjustment deleted.")
+                await callback.answer()
 
 # === Register if needed ===
 def register_adjustment_handlers(dp):

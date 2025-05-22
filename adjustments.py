@@ -153,7 +153,16 @@ async def confirm_recalc(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "recalc_yes")
 async def recalc_budget_now(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await recalculate_current_budget(callback.from_user.id)
+
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = result.scalar()
+        if not user:
+            await callback.message.answer("❌ User not found.")
+            await callback.answer()
+            return
+
+    await recalculate_current_budget(user.id)
     await callback.message.answer("🔄 Budget successfully recalculated.", reply_markup=main_menu())
     await callback.answer()
 

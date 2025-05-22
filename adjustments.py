@@ -125,7 +125,6 @@ async def adjustment_choose_permanency(message: Message, state: FSMContext):
         [InlineKeyboardButton(text="❌ No, only this month", callback_data="perm_no")]
     ]))
 
-
 @dp.callback_query(F.data.in_(["perm_yes", "perm_no"]))
 async def finalize_adjustment(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -229,10 +228,13 @@ async def recalc_budget_now(callback: CallbackQuery, state: FSMContext):
 
 # === View Adjustments History ===
 @dp.message(Command("adjustments"))
-async def show_adjustments(message: Message):
+async def show_adjustments(message: Message, user_id: int | None = None):
     async with async_session() as session:
-        logger.info(f"🔍 Looking up user by telegram_id={message.from_user.id}")
-        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        if user_id is None:
+            user_id = message.from_user.id
+
+        logger.info(f"🔍 Looking up user by telegram_id={user_id}")
+        result = await session.execute(select(User).where(User.telegram_id == user_id))
         user = result.scalar()
 
         if not user:
@@ -274,6 +276,10 @@ async def show_adjustments(message: Message):
 async def view_adjustments_menu(callback: CallbackQuery):
     await show_adjustments(callback.message, user_id=callback.from_user.id)
     await callback.answer()
+
+@dp.message(Command("adjustments"))
+async def show_adjustments_command(message: Message):
+    await show_adjustments(message)
 
 @dp.callback_query(F.data.startswith("delete_adj_"))
 async def delete_adj_callback(callback: CallbackQuery):

@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 class SetSavings(StatesGroup):
     waiting_for_amount = State()
 
-@dp.callback_query(F.data == "set_savings")
+#@dp.callback_query(F.data == "set_savings")
 async def ask_savings_amount(callback: CallbackQuery, state: FSMContext):
     await state.set_state(SetSavings.waiting_for_amount)
     await callback.message.answer("💰 How much would you like to save each month (EUR)?", reply_markup=cancel_keyboard())
     await callback.answer()
 
-@dp.message(SetSavings.waiting_for_amount)
+#@dp.message(SetSavings.waiting_for_amount)
 async def save_savings_amount(message: Message, state: FSMContext):
     try:
         amount = float(message.text.replace(",", "."))

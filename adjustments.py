@@ -140,6 +140,91 @@ async def finalize_adjustment(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
+# === Recalculate Budget Flow ===
+@dp.callback_query(F.data == "recalculate_budget")
+async def confirm_recalc(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(BudgetAdjustmentFSM.confirm_recalculation)
+    await callback.message.answer("Are you sure you want to recalculate the budget?\nThis cannot be undone.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Yes", callback_data="recalc_yes")],
+        [InlineKeyboardButton(text="❌ No", callback_data="main_menu")]
+    ]))
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "recalc_yes")
+async def recalc_budget_now(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = result.scalar()
+        if not user:
+            await callback.message.answer("❌ User not found.")
+            await callback.answer()
+            return
+
+        today = date.today()
+        month_start = today.replace(day=1)
+        month_end = month_start.replace(month=month_start.month % 12 + 1, day=1) - timedelta(days=1)
+        total_days = month_end.day
+
+        income = user.monthly_income or 0
+        savings_goal = user.monthly_savings or 0
+
+        result = await session.execute(select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id))
+        fixed_total = result.scalar() or 0
+
+        result = await session.execute(
+            select(func.min(DailyExpense.created_at)).where(
+                DailyExpense.user_id == user.id,
+                func.date(DailyExpense.created_at) >= month_start
+            )
+        )
+        first_expense_date = result.scalar()
+        from_date = first_expense_date.date() if first_expense_date else today
+
+        days_left = (month_end - from_date).days + 1
+        coefficient = days_left / total_days if total_days else 1.0
+
+        result = await session.execute(
+            select(MonthlyBudgetAdjustment).where(
+                MonthlyBudgetAdjustment.user_id == user.id,
+                MonthlyBudgetAdjustment.month == month_start,
+                MonthlyBudgetAdjustment.processed == 1
+            )
+        )
+        adjustments = result.scalars().all()
+        for adj in adjustments:
+            delta = adj.amount if adj.type == 'add' else -adj.amount
+            if adj.source == "income":
+                income += delta
+            elif adj.source == "fixed_expense":
+                fixed_total += delta
+            elif adj.source == "savings":
+                savings_goal += delta
+
+        full_remaining = income - fixed_total - savings_goal
+        remaining = full_remaining * coefficient
+
+        result = await session.execute(
+            select(MonthlyBudget).where(
+                MonthlyBudget.user_id == user.id,
+                MonthlyBudget.month_start == month_start
+            )
+        )
+        budget = result.scalar()
+        if budget:
+            budget.income = income
+            budget.fixed = fixed_total
+            budget.savings_goal = savings_goal
+            budget.remaining = remaining
+            budget.coefficient = coefficient
+            await session.commit()
+
+        await callback.message.answer("🔄 Budget successfully recalculated.", reply_markup=main_menu())
+    await callback.answer()
+
+
 # === View Adjustments History ===
 @dp.message(Command("adjustments"))
 async def show_adjustments(message: Message):

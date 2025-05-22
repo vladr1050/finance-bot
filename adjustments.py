@@ -1,7 +1,8 @@
 from aiogram import F
+from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete
 from datetime import date, datetime, timedelta
 
 from db.models import MonthlyBudgetAdjustment, User, FixedExpense, MonthlyBudget, DailyExpense
@@ -139,175 +140,67 @@ async def finalize_adjustment(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-# === Recalculate Budget Flow ===
-@dp.callback_query(F.data == "recalculate_budget")
-async def confirm_recalc(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(BudgetAdjustmentFSM.confirm_recalculation)
-    await callback.message.answer("Are you sure you want to recalculate the budget?\nThis cannot be undone.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Yes", callback_data="recalc_yes")],
-        [InlineKeyboardButton(text="❌ No", callback_data="main_menu")]
-    ]))
-    await callback.answer()
+# === View Adjustments History ===
+@dp.message(Command("adjustments"))
+async def show_adjustments(message: Message):
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
+        user = result.scalar()
+
+        if not user:
+            await message.answer("❌ User not found. Use /start")
+            return
+
+        result = await session.execute(
+            select(MonthlyBudgetAdjustment).where(
+                MonthlyBudgetAdjustment.user_id == user.id
+            ).order_by(MonthlyBudgetAdjustment.created_at.desc()).limit(20)
+        )
+        adjustments = result.scalars().all()
+
+        if not adjustments:
+            await message.answer("📭 No adjustments found.")
+            return
+
+        for adj in adjustments:
+            text = (
+                f"🗓 {adj.month.strftime('%Y-%m')}\n"
+                f"📌 Source: {adj.source}\n"
+                f"{('➕' if adj.type == 'add' else '➖')} Amount: €{adj.amount:.2f}\n"
+                f"📝 {adj.comment or '-'}\n"
+                f"🔁 Permanent: {'✅' if adj.apply_permanently else '❌'}\n"
+                f"📦 Processed: {'✅' if adj.processed else '❌'}"
+            )
+            buttons = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_adj_{adj.id}")]
+                ]
+            )
+            await message.answer(text, reply_markup=buttons)
 
 
-@dp.callback_query(F.data == "recalc_yes")
-async def recalc_budget_now(callback: CallbackQuery, state: FSMContext):
-    await state.clear()
-
+@dp.callback_query(F.data.startswith("delete_adj_"))
+async def delete_adj_callback(callback: CallbackQuery):
+    adj_id = int(callback.data.split("_")[-1])
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
         user = result.scalar()
+
         if not user:
             await callback.message.answer("❌ User not found.")
             await callback.answer()
             return
 
-    await recalculate_current_budget(user.id)
-    await callback.message.answer("🔄 Budget successfully recalculated.", reply_markup=main_menu())
-    await callback.answer()
-
-
-async def recalculate_current_budget(user_id):
-    today = date.today()
-    month_start = today.replace(day=1)
-    month_end = month_start.replace(month=month_start.month % 12 + 1, day=1) - timedelta(days=1)
-    total_days = month_end.day
-
-    async with async_session() as session:
-        user = await session.get(User, user_id)
-        income = user.monthly_income or 0
-        savings_goal = user.monthly_savings or 0
-        fixed_total = (await session.execute(select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id))).scalar() or 0
-
-        # Determine actual start date for expenses this month
-        result = await session.execute(
-            select(func.min(DailyExpense.created_at)).where(
-                DailyExpense.user_id == user.id,
-                func.date(DailyExpense.created_at) >= month_start
+        await session.execute(
+            delete(MonthlyBudgetAdjustment).where(
+                MonthlyBudgetAdjustment.id == adj_id,
+                MonthlyBudgetAdjustment.user_id == user.id
             )
         )
-        first_expense_date = result.scalar()
-        from_date = first_expense_date.date() if first_expense_date else today
-
-        days_left = (month_end - from_date).days + 1
-        coefficient = days_left / total_days if total_days else 1.0
-
-    async with async_session() as session:
-        user = await session.get(User, user_id)
-        income = user.monthly_income or 0
-        savings_goal = user.monthly_savings or 0
-        fixed_total = (await session.execute(select(func.sum(FixedExpense.amount)).where(FixedExpense.user_id == user.id))).scalar() or 0
-
-        result = await session.execute(
-            select(MonthlyBudgetAdjustment).where(
-                MonthlyBudgetAdjustment.user_id == user.id,
-                MonthlyBudgetAdjustment.month == month_start,
-                MonthlyBudgetAdjustment.processed == 1
-            )
-        )
-        adjustments = result.scalars().all()
-        for adj in adjustments:
-            delta = adj.amount if adj.type == 'add' else -adj.amount
-            if adj.source == "income":
-                income += delta
-            elif adj.source == "fixed_expense":
-                fixed_total += delta
-            elif adj.source == "savings":
-                savings_goal += delta
-
-        full_remaining = income - fixed_total - savings_goal
-        remaining = full_remaining * coefficient
-
-        result = await session.execute(
-            select(MonthlyBudget).where(
-                MonthlyBudget.user_id == user.id,
-                MonthlyBudget.month_start == month_start
-            )
-        )
-        budget = result.scalar()
-        if budget:
-            budget.income = income
-            budget.fixed = fixed_total
-            budget.savings_goal = savings_goal
-            budget.remaining = remaining
-            budget.coefficient = coefficient
-            await session.commit()
-
-    # === Adjustments History ===
-    async def get_user_adjustments(user_id: int, limit: int = 20):
-        async with async_session() as session:
-            result = await session.execute(
-                select(MonthlyBudgetAdjustment).where(
-                    MonthlyBudgetAdjustment.user_id == user_id
-                ).order_by(MonthlyBudgetAdjustment.created_at.desc()).limit(limit)
-            )
-            return result.scalars().all()
-
-    async def delete_adjustment(adjustment_id: int, user_id: int):
-        async with async_session() as session:
-            await session.execute(
-                delete(MonthlyBudgetAdjustment).where(
-                    MonthlyBudgetAdjustment.id == adjustment_id,
-                    MonthlyBudgetAdjustment.user_id == user_id
-                )
-            )
-            await session.commit()
-            logger.info(f"🗑 Adjustment {adjustment_id} deleted for user {user_id}")
-
-    @dp.callback_query(F.data == "view_adjustments")
-    async def view_adjustments_menu(callback: CallbackQuery):
-        await callback.message.answer("📋 Showing adjustments history...\nUse /adjustments anytime.")
-        await show_adjustments(callback.message)
+        await session.commit()
+        await callback.message.edit_text("🗑 Adjustment deleted.")
         await callback.answer()
 
-        @ dp.message(Command("adjustments"))
-        async
-
-        def show_adjustments(message: Message):
-            async with async_session() as session:
-                result = await session.execute(select(User).where(User.telegram_id == message.from_user.id))
-                user = result.scalar()
-
-                if not user:
-                    await message.answer("❌ User not found. Use /start")
-                    return
-
-                adjustments = await get_user_adjustments(user.id)
-                if not adjustments:
-                    await message.answer("📭 No adjustments found.")
-                    return
-
-                for adj in adjustments:
-                    text = (
-                        f"🗓 {adj.month.strftime('%Y-%m')}\n"
-                        f"📌 Source: {adj.source}\n"
-                        f"{('➕' if adj.type == 'add' else '➖')} Amount: €{adj.amount:.2f}\n"
-                        f"📝 {adj.comment or '-'}\n"
-                        f"🔁 Permanent: {'✅' if adj.apply_permanently else '❌'}\n"
-                        f"📦 Processed: {'✅' if adj.processed else '❌'}"
-                    )
-                    buttons = InlineKeyboardMarkup(
-                        inline_keyboard=[
-                            [InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_adj_{adj.id}")]
-                        ]
-                    )
-                    await message.answer(text, reply_markup=buttons)
-
-        @dp.callback_query(F.data.startswith("delete_adj_"))
-        async def delete_adj_callback(callback: CallbackQuery):
-            adj_id = int(callback.data.split("_")[-1])
-            async with async_session() as session:
-                result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
-                user = result.scalar()
-
-                if not user:
-                    await callback.message.answer("❌ User not found.")
-                    await callback.answer()
-                    return
-
-                await delete_adjustment(adj_id, user.id)
-                await callback.message.edit_text("🗑 Adjustment deleted.")
-                await callback.answer()
 
 # === Register if needed ===
 def register_adjustment_handlers(dp):

@@ -148,12 +148,13 @@ async def show_forecast(message: Message, state: FSMContext):
 
         name = args[1].strip()
         data = await state.get_data()
-        required_keys = {"months", "income_change", "fixed_change", "savings_goal", "extra_expenses", "latest_forecast"}
+        required_keys = {"months", "income_change", "fixed_change", "savings_goal", "extra_expenses"}
 
         if not required_keys.issubset(data.keys()):
             await message.answer("❌ No forecast data available. Please run /forecast first.")
             return
 
+        scenario = None
         try:
             scenario = await create_forecast_scenario(
                 telegram_id=message.from_user.id,
@@ -164,9 +165,18 @@ async def show_forecast(message: Message, state: FSMContext):
                 savings_goal=data["savings_goal"],
                 extra_expenses=data["extra_expenses"]
             )
-    await state.clear()
-    await state.update_data(latest_forecast=forecast)
-    await message.answer("💾 Would you like to save this scenario?\nSend /save_scenario followed by a name.\nExample:\n`/save_scenario Summer 2025`", parse_mode="Markdown")
+        finally:
+            await state.clear()
+
+        if scenario:
+            await state.update_data(latest_forecast=scenario)
+            await message.answer(
+                "💾 Would you like to save this scenario?\nSend /save_scenario followed by a name.\n"
+                "Example:\n`/save_scenario Summer 2025`",
+                parse_mode="Markdown"
+            )
+        else:
+            await message.answer("❌ Forecast creation failed.")
 
 @router.message(F.text.startswith("/save_scenario"))
 async def save_scenario(message: Message, state: FSMContext):

@@ -13,6 +13,10 @@ class User(Base):
     monthly_income = Column(Float, nullable=True)  # Был Integer
     monthly_savings = Column(Float, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    is_premium = Column(Boolean, default=False)
+
+    from sqlalchemy.orm import relationship
+    forecast_scenarios = relationship("ForecastScenario", back_populates="user", cascade="all, delete-orphan")
 
 class FixedExpense(Base):
     __tablename__ = 'fixed_expenses'

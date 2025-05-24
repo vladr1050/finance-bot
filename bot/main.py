@@ -7,7 +7,6 @@ logging.basicConfig(
     force=True
 )
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import asyncio
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import CommandStart, Command
@@ -15,7 +14,6 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from config import Config
 from db.database import init_db, async_session, check_or_create_monthly_budgets
 from db.models import User, FixedExpense, DailyExpense, ExpenseCategory, MonthlyBudget
 from sqlalchemy import select, func
@@ -30,12 +28,16 @@ from savings import *
 from admin import *
 from utils import deduct_from_savings_if_needed
 from history_editor import register_history_editor_handlers, show_expense_history_for_range
+
 from category_grouping import register_category_group_handlers
 register_category_group_handlers(dp)
 register_history_editor_handlers(dp)
 
 from adjustments import register_adjustment_handlers
 register_adjustment_handlers(dp)
+
+from forecast.handlers import router as forecast_router
+dp.include_router(forecast_router)
 
 # ----- START -----
 
@@ -588,13 +590,19 @@ async def return_to_main(callback: CallbackQuery):
 
 # ----- END OF CODE -----
 
+from config import Config, ENVIRONMENT
+
 async def main():
-    logger.info(f"BOT_TOKEN loaded: {Config.BOT_TOKEN}")
-    logger.info("🚀 Starting bot...")
+    logger.info(f"🔧 ENVIRONMENT: {ENVIRONMENT}")
+    logger.info(f"🔐 BOT_TOKEN loaded: {Config.BOT_TOKEN}")
+    logger.info(f"🚀 Starting bot in {ENVIRONMENT.upper()} mode")
+
     await init_db()
     await check_or_create_monthly_budgets()
     await dp.start_polling(bot)
 
+
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

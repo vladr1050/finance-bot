@@ -1,16 +1,27 @@
 import os
+import logging
 from dotenv import load_dotenv
 
-# Загружаем переменные из .env
+# Load .env variables for local dev
 load_dotenv()
 
-# Логируем, чтобы убедиться, что всё загружено
-print(f"👉 ENV BOT_TOKEN: {os.getenv('BOT_TOKEN')}")
-print(f"👉 ENV DB_URL: {os.getenv('DB_URL')}")
+# Detect environment
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+IS_DEV = ENVIRONMENT == "development"
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+
+logging.info(f"🔧 ENVIRONMENT: {ENVIRONMENT}")
+logging.info(f"🔐 BOT_TOKEN: {os.getenv('BOT_TOKEN')[:10]}...")
+logging.info(f"🛢 DATABASE_URL: {os.getenv('DATABASE_URL') or os.getenv('DB_URL')}")
 
 class Config:
     BOT_TOKEN = os.getenv("BOT_TOKEN")
-    DB_URL = os.getenv("DB_URL")
+    DB_URL = os.getenv("DATABASE_URL") or os.getenv("DB_URL")
 
     @staticmethod
     def is_valid():

@@ -21,7 +21,7 @@ from sqlalchemy.orm import joinedload
 from collections import defaultdict
 from datetime import date, timedelta
 from datetime import datetime
-from states import Register, AddFixedExpense, EditExpense, EditIncome, AddDailyExpense, BudgetAdjustmentFSM, AddCategory
+from states import Register, AddFixedExpense, EditExpense, EditIncome, AddDailyExpense, BudgetAdjustmentFSM, AddCategory, ForecastScenarioFSM
 from keyboards import main_menu, settings_menu, after_expense_menu, skip_keyboard, cancel_keyboard, skip_cancel_keyboard, back_keyboard
 from bot_setup import bot, dp
 from savings import *

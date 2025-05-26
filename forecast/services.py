@@ -28,7 +28,11 @@ async def create_forecast_scenario(
             raise PermissionError("Only premium users can save forecast scenarios.")
 
         base_income = user.monthly_income
-        base_fixed = sum(e.amount for e in user.fixed_expenses)
+        result = await session.execute(
+            select(FixedExpense).where(FixedExpense.user_id == user.id)
+        )
+        fixed_expenses = result.scalars().all()
+        base_fixed = sum(e.amount for e in fixed_expenses)
 
         forecast = calculate_forecast(
             base_income=base_income,

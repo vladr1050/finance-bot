@@ -7,7 +7,7 @@ from aiogram.fsm.state import State
 from aiogram.filters import Command
 from db.database import async_session
 from sqlalchemy import select
-from db.models import User
+from db.models import User, FixedExpense
 from states import ForecastScenarioFSM
 from forecast.logic import calculate_forecast
 from forecast.services import create_forecast_scenario, get_user_forecast_scenarios, delete_forecast_scenario

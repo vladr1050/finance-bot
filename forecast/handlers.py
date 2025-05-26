@@ -113,9 +113,15 @@ async def show_forecast(message: Message, state: FSMContext):
         result = await session.execute(select(User).where(User.telegram_id == user_id))
         user = result.scalar()
 
+    result = await session.execute(
+        select(FixedExpense).where(FixedExpense.user_id == user.id)
+    )
+    fixed_expenses = result.scalars().all()
+    base_fixed_expenses = sum(e.amount for e in fixed_expenses)
+
     forecast = calculate_forecast(
         base_income=user.monthly_income,
-        base_fixed_expenses=sum(e.amount for e in user.fixed_expenses),
+        base_fixed_expenses=base_fixed_expenses,
         base_savings_goal=data["savings_goal"],
         months=data["months"],
         income_changes=data["income_change"],

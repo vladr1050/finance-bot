@@ -92,12 +92,6 @@ def register_history_editor_handlers(dp):
         await state.update_data(view_messages=message_ids)
         await callback.answer()
 
-    @dp.callback_query(F.data == "cancel")
-    async def cancel_range(callback: CallbackQuery, state: FSMContext):
-        await state.clear()
-        await callback.message.edit_text("❌ Cancelled.", reply_markup=main_menu())
-        await callback.answer()
-
     @dp.callback_query(F.data == "edit_history")
     async def handle_edit_history(callback: CallbackQuery, state: FSMContext):
         await state.update_data(view_mode="edit")

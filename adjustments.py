@@ -37,10 +37,16 @@ async def save_adjustment(user_id, source, type_, amount, comment, permanent):
 async def edit_income_start(callback: CallbackQuery, state: FSMContext):
     await state.update_data(source="income")
     await state.set_state(BudgetAdjustmentFSM.choosing_operation)
-    await callback.message.answer("Choose type of change:", reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Add", callback_data="adjust_add")],
-        [InlineKeyboardButton(text="➖ Subtract", callback_data="adjust_subtract")]
-    ]))
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="➕ Add", callback_data="adjust_add"),
+            InlineKeyboardButton(text="➖ Subtract", callback_data="adjust_subtract")
+        ],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel")]
+    ])
+
+    await callback.message.answer("Choose type of change:", reply_markup=keyboard)
     await callback.answer()
 
 
@@ -104,16 +110,21 @@ async def adjustment_choose_amount(callback: CallbackQuery, state: FSMContext):
 
 @dp.message(BudgetAdjustmentFSM.entering_amount)
 async def adjustment_enter_comment(message: Message, state: FSMContext):
+    amount_str = message.text.replace(",", ".").strip()
+
     try:
-        amount = float(message.text.replace(",", "."))
+        amount = float(amount_str)
         if amount <= 0:
-            raise ValueError
+            await message.answer("🚫 Amount must be greater than zero. Please enter a valid number.")
+            return
     except ValueError:
-        await message.answer("Please enter a valid positive number.")
+        logging.warning(f"[Adjustment] Invalid amount from user {message.from_user.id}: '{message.text}'")
+        await message.answer("❗ Please enter a valid number (e.g., 100 or 200.50).")
         return
+
     await state.update_data(amount=amount)
     await state.set_state(BudgetAdjustmentFSM.entering_comment)
-    await message.answer("Add comment (optional):")
+    await message.answer("📝 Add comment (optional):")
 
 
 @dp.message(BudgetAdjustmentFSM.entering_comment)

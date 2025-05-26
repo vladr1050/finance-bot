@@ -70,11 +70,16 @@ from states import Register
 from keyboards import main_menu
 
 @dp.message(Register.waiting_for_income)
-async def get_income(message: Message, state: FSMContext):
+async def get_income(message: types.Message, state: FSMContext):
+    income_str = message.text.replace(",", ".").strip()
     try:
-        income = float(message.text.replace(",", "."))
+        income = float(income_str)
+        if income <= 0:
+            await message.answer("🚫 Income must be greater than zero. Please enter a valid number.")
+            return
     except ValueError:
-        await message.answer("Please enter a valid number.")
+        logging.warning(f"[Income] Invalid input from user {message.from_user.id}: {message.text}")
+        await message.answer("❗ Please enter a valid number (e.g., 2500 or 2500.00)")
         return
 
     data = await state.get_data()
@@ -86,9 +91,9 @@ async def get_income(message: Message, state: FSMContext):
         )
         session.add(user)
         await session.commit()
-        await session.refresh(user)  # ✅ Получаем user.id
+        await session.refresh(user)  # ✅ Get user.id
 
-        # ➕ Добавление дефолтных категорий
+        # ➕ Default categories
         default_categories = [
             "Rent / Mortgage", "Utilities", "Home maintenance",
             "Groceries", "Restaurants", "Coffee / Snacks",
@@ -102,7 +107,7 @@ async def get_income(message: Message, state: FSMContext):
         ]
 
         for name in default_categories:
-            category = ExpenseCategory(user_id=user.id, name=name)  # ✅ используем user.id
+            category = ExpenseCategory(user_id=user.id, name=name)
             session.add(category)
 
         await session.commit()
@@ -264,10 +269,16 @@ async def get_fixed_name(message: Message, state: FSMContext):
 
 @dp.message(AddFixedExpense.waiting_for_amount)
 async def get_fixed_amount(message: Message, state: FSMContext):
+    amount_str = message.text.replace(",", ".").strip()
+
     try:
-        amount = float(message.text)
+        amount = float(amount_str)
+        if amount <= 0:
+            await message.answer("🚫 Amount must be greater than zero. Please enter a valid number.")
+            return
     except ValueError:
-        await message.answer("Amount must be a number.")
+        logging.warning(f"[FixedExpense] Invalid input from user {message.from_user.id}: {message.text}")
+        await message.answer("❗ Please enter a valid number (e.g., 120 or 85.50)")
         return
 
     data = await state.get_data()
@@ -298,6 +309,7 @@ async def get_fixed_amount(message: Message, state: FSMContext):
         if budget:
             budget.fixed += amount
             budget.remaining -= amount
+
         await session.commit()
 
     await message.answer("✅ Fixed expense saved and budget updated!", reply_markup=main_menu())
@@ -388,7 +400,7 @@ async def cb_report(callback: CallbackQuery):
 #@dp.callback_query(F.data == "view_history")
 async def view_expense_history(callback: CallbackQuery):
     today = datetime.utcnow().date()
-    start_date = today - timedelta(days=9)
+    start_date = today - timedelta(days=3)
 
     async with async_session() as session:
         result = await session.execute(
@@ -402,7 +414,7 @@ async def view_expense_history(callback: CallbackQuery):
         rows = result.all()
 
     if not rows:
-        await callback.message.answer("📭 No daily expenses found in the last 10 days.")
+        await callback.message.answer("📭 No daily expenses found in the last 3 days.")
         await callback.answer()
         return
 
@@ -441,11 +453,18 @@ async def choose_category(callback: CallbackQuery, state: FSMContext):
 
 @dp.message(AddDailyExpense.entering_amount)
 async def enter_amount(message: Message, state: FSMContext):
+    amount_str = message.text.replace(',', '.').strip()
+
     try:
-        amount = float(message.text.replace(',', '.'))
+        amount = float(amount_str)
+        if amount <= 0:
+            await message.answer("🚫 Amount must be greater than zero. Please enter a valid number.", reply_markup=cancel_keyboard())
+            return
     except ValueError:
-        await message.answer("Please enter a valid number.", reply_markup=cancel_keyboard())
+        logging.warning(f"[DailyExpense] Invalid input from user {message.from_user.id}: {message.text}")
+        await message.answer("❗ Please enter a valid number (e.g., 15 or 12.50)", reply_markup=cancel_keyboard())
         return
+
     await state.update_data(amount=amount)
     await state.set_state(AddDailyExpense.entering_comment)
     await message.answer("📝 Add a comment or skip:", reply_markup=skip_keyboard())
@@ -569,13 +588,6 @@ async def update_income(message: Message, state: FSMContext):
 
     await message.answer(f"✅ Monthly income updated to €{new_income:.2f}", reply_markup=main_menu())
     await state.clear()
-
-@dp.callback_query(F.data == "cancel")
-async def cancel_action(callback: CallbackQuery, state: FSMContext):
-    await state.clear()
-    await callback.message.edit_text("❌ Cancelled.")
-    await callback.message.edit_reply_markup()
-    await callback.answer()
 
 @dp.callback_query(F.data == "skip")
 async def skip(callback: CallbackQuery, state: FSMContext):

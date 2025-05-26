@@ -394,6 +394,49 @@ async def cb_report(callback: CallbackQuery):
     )
     await callback.answer()
 
+@dp.callback_query(F.data == "category_report")
+async def show_category_report(callback: CallbackQuery):
+    today = date.today()
+    month_start = today.replace(day=1)
+
+    async with async_session() as session:
+        # Получаем пользователя
+        result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = result.scalar()
+        if not user:
+            await callback.message.answer("❌ User not found. Use /start.")
+            return
+
+        # Получаем все траты по категориям
+        result = await session.execute(
+            select(
+                ExpenseCategory.name,
+                func.sum(DailyExpense.amount)
+            ).join(ExpenseCategory, DailyExpense.category_id == ExpenseCategory.id)
+            .where(
+                DailyExpense.user_id == user.id,
+                func.date(DailyExpense.created_at) >= month_start
+            )
+            .group_by(ExpenseCategory.name)
+            .order_by(func.sum(DailyExpense.amount).desc())
+        )
+        rows = result.all()
+
+    if not rows:
+        await callback.message.answer("📭 No expenses recorded this month.")
+        await callback.answer()
+        return
+
+    total = sum(amount for _, amount in rows)
+    lines = ["📊 Expenses by Category\n"]
+    for name, amount in rows:
+        percent = (amount / total) * 100 if total else 0
+        lines.append(f"• {name} — €{amount:.2f} ({percent:.0f}%)")
+
+    lines.append(f"\nTotal: €{total:.2f}")
+    await callback.message.answer("\n".join(lines), reply_markup=main_menu())
+    await callback.answer()
+
 # ----- DAILY EXPENSE ENTRY -----
 
 # ✅ VIEW HISTORY (corrected)

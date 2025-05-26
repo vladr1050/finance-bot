@@ -37,7 +37,6 @@ async def save_adjustment(user_id, source, type_, amount, comment, permanent):
 async def edit_income_start(callback: CallbackQuery, state: FSMContext):
     await state.update_data(source="income")
     await state.set_state(BudgetAdjustmentFSM.choosing_operation)
-
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="➕ Add", callback_data="adjust_add"),
@@ -45,7 +44,6 @@ async def edit_income_start(callback: CallbackQuery, state: FSMContext):
         ],
         [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel")]
     ])
-
     await callback.message.answer("Choose type of change:", reply_markup=keyboard)
     await callback.answer()
 
@@ -54,10 +52,14 @@ async def edit_income_start(callback: CallbackQuery, state: FSMContext):
 async def edit_savings_goal_start(callback: CallbackQuery, state: FSMContext):
     await state.update_data(source="savings")
     await state.set_state(BudgetAdjustmentFSM.choosing_operation)
-    await callback.message.answer("Adjust your monthly savings goal:", reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Add", callback_data="adjust_add")],
-        [InlineKeyboardButton(text="➖ Subtract", callback_data="adjust_subtract")]
-    ]))
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="➕ Add", callback_data="adjust_add"),
+            InlineKeyboardButton(text="➖ Subtract", callback_data="adjust_subtract")
+        ],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel")]
+    ])
+    await callback.message.answer("Adjust your monthly savings goal:", reply_markup=keyboard)
     await callback.answer()
 
 

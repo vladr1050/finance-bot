@@ -89,16 +89,19 @@ async def show_fixed_expense_list(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Select an expense to adjust:", reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
     await callback.answer()
 
-
 @dp.callback_query(F.data.startswith("edit_fixed_"))
 async def start_edit_fixed(callback: CallbackQuery, state: FSMContext):
     expense_id = int(callback.data.split("_")[-1])
     await state.update_data(fixed_expense_id=expense_id, source="fixed_expense")
     await state.set_state(BudgetAdjustmentFSM.choosing_operation)
-    await callback.message.answer("Choose type of change:", reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Add", callback_data="adjust_add")],
-        [InlineKeyboardButton(text="➖ Subtract", callback_data="adjust_subtract")]
-    ]))
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="➕ Add", callback_data="adjust_add"),
+            InlineKeyboardButton(text="➖ Subtract", callback_data="adjust_subtract")
+        ],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel")]
+    ])
+    await callback.message.answer("Choose type of change:", reply_markup=keyboard)
     await callback.answer()
 
 
@@ -113,7 +116,6 @@ async def adjustment_choose_amount(callback: CallbackQuery, state: FSMContext):
 @dp.message(BudgetAdjustmentFSM.entering_amount)
 async def adjustment_enter_comment(message: Message, state: FSMContext):
     amount_str = message.text.replace(",", ".").strip()
-
     try:
         amount = float(amount_str)
         if amount <= 0:
@@ -127,7 +129,6 @@ async def adjustment_enter_comment(message: Message, state: FSMContext):
     await state.update_data(amount=amount)
     await state.set_state(BudgetAdjustmentFSM.entering_comment)
     await message.answer("📝 Add comment (optional):")
-
 
 @dp.message(BudgetAdjustmentFSM.entering_comment)
 async def adjustment_choose_permanency(message: Message, state: FSMContext):

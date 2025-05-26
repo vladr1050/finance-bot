@@ -643,6 +643,24 @@ async def return_to_main(callback: CallbackQuery):
     await callback.message.edit_text("🔙 Back to main menu", reply_markup=main_menu())
     await callback.answer()
 
+# ----- FORECAST -----
+
+async def start_forecast_fsm(entry_point: Message | CallbackQuery, state: FSMContext):
+    await state.set_state(ForecastScenarioFSM.choosing_months)
+    buttons = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="1 Month", callback_data="forecast_months_1")],
+        [InlineKeyboardButton(text="3 Months", callback_data="forecast_months_3")],
+        [InlineKeyboardButton(text="6 Months", callback_data="forecast_months_6")],
+        [InlineKeyboardButton(text="12 Months", callback_data="forecast_months_12")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel")]
+    ])
+    await entry_point.answer("📅 Select forecast period:", reply_markup=buttons)
+
+@dp.callback_query(F.data == "forecast_menu")
+async def open_forecast_menu(callback: CallbackQuery, state: FSMContext):
+    await start_forecast_fsm(callback.message, state)
+    await callback.answer()
+
 # ----- END OF CODE -----
 
 from config import Config, ENVIRONMENT

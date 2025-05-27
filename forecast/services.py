@@ -64,12 +64,15 @@ async def create_forecast_scenario(
 
 async def get_user_forecast_scenarios(telegram_id: int) -> List[ForecastScenario]:
     async with async_session() as session:
-        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        result = await session.execute(
+            select(User)
+            .where(User.telegram_id == telegram_id)
+            .options(selectinload(User.forecast_scenarios))
+        )
         user = result.scalar()
         if not user:
             return []
         return user.forecast_scenarios
-
 
 async def delete_forecast_scenario(scenario_id: int, telegram_id: int) -> bool:
     async with async_session() as session:

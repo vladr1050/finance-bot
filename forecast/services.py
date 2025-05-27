@@ -1,7 +1,7 @@
 # forecast/services.py
 
 from forecast.models import ForecastScenario
-from db.models import User
+from db.models import User, FixedExpense
 from forecast.logic import calculate_forecast
 from db.database import async_session
 from sqlalchemy import select

@@ -14,20 +14,19 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from db.database import init_db, async_session, check_or_create_monthly_budgets
-from db.models import User, FixedExpense, DailyExpense, ExpenseCategory, MonthlyBudget
+from db.database import init_db, check_or_create_monthly_budgets
+from db.models import MonthlyBudget
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from collections import defaultdict
 from datetime import date, timedelta
 from datetime import datetime
-from states import Register, AddFixedExpense, EditExpense, EditIncome, AddDailyExpense, BudgetAdjustmentFSM, AddCategory, ForecastScenarioFSM
-from keyboards import main_menu, settings_menu, after_expense_menu, skip_keyboard, cancel_keyboard, skip_cancel_keyboard, back_keyboard
-from bot_setup import bot, dp
+from states import Register, AddFixedExpense, EditExpense, EditIncome, AddDailyExpense, ForecastScenarioFSM
+from keyboards import settings_menu, after_expense_menu, skip_keyboard
+from bot_setup import bot
 from savings import *
 from admin import *
-from utils import deduct_from_savings_if_needed
-from history_editor import register_history_editor_handlers, show_expense_history_for_range
+from history_editor import register_history_editor_handlers
 
 from category_grouping import register_category_group_handlers
 register_category_group_handlers(dp)
@@ -663,7 +662,7 @@ async def open_forecast_menu(callback: CallbackQuery, state: FSMContext):
 
 # ----- END OF CODE -----
 
-from config import Config, ENVIRONMENT
+from app.config import Config, ENVIRONMENT
 
 async def main():
     logger.info(f"🔧 ENVIRONMENT: {ENVIRONMENT}")

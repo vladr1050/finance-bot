@@ -6,7 +6,7 @@ import asyncio
 import logging
 from db.database import check_or_create_monthly_budgets
 from utils import handle_overspending, move_remaining_to_savings
-from config import Config
+from app.config import Config
 
 if not Config.is_valid():
     raise RuntimeError("❌ Missing BOT_TOKEN or DB_URL environment variables")

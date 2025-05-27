@@ -113,30 +113,36 @@ async def show_forecast(message: Message, state: FSMContext):
         result = await session.execute(select(User).where(User.telegram_id == user_id))
         user = result.scalar()
 
-    result = await session.execute(
-        select(FixedExpense).where(FixedExpense.user_id == user.id)
-    )
-    fixed_expenses = result.scalars().all()
-    base_fixed_expenses = sum(e.amount for e in fixed_expenses)
+        result = await session.execute(
+            select(FixedExpense).where(FixedExpense.user_id == user.id)
+        )
+        fixed_expenses = result.scalars().all()
+        base_fixed_expenses = sum(e.amount for e in fixed_expenses)
 
-    forecast = calculate_forecast(
-        base_income=user.monthly_income,
-        base_fixed_expenses=base_fixed_expenses,
-        base_savings_goal=data["savings_goal"],
-        months=data["months"],
-        income_changes=data["income_change"],
-        fixed_changes=data["fixed_change"],
-        extra_expenses=data["extra_expenses"]
-    )
-    # 🔁 Добавляем текущие накопления
-    result = await session.execute(
-        select(SavingsBalance).where(SavingsBalance.user_id == user.id)
-    )
-    savings = result.scalar()
-    savings_amount = savings.amount if savings else 0.0
+        forecast = calculate_forecast(
+            base_income=user.monthly_income,
+            base_fixed_expenses=base_fixed_expenses,
+            base_savings_goal=data["savings_goal"],
+            months=data["months"],
+            income_changes=data["income_change"],
+            fixed_changes=data["fixed_change"],
+            extra_expenses=data["extra_expenses"]
+        )
 
-    forecast["savings_balance"] = savings_amount
-    forecast["total_free_including_savings"] = forecast["total_free"] + savings_amount
+        # 🔁 Добавляем текущие накопления
+        result = await session.execute(
+            select(SavingsBalance).where(SavingsBalance.user_id == user.id)
+        )
+        savings = result.scalar()
+        savings_amount = savings.amount if savings else 0.0
+
+        forecast["savings_balance"] = savings_amount
+        forecast["total_free_including_savings"] = forecast["total_free"] + savings_amount
+
+        total_days = data["months"] * 30  # можно заменить на более точный подсчёт, если потребуется
+        forecast["daily_budget_including_savings"] = (
+            forecast["total_free_including_savings"] / total_days if total_days > 0 else 0.0
+        )
 
     await message.answer(
         f"📊 *Forecast Summary*:\n\n"
@@ -149,9 +155,11 @@ async def show_forecast(message: Message, state: FSMContext):
         f"💾 Current Savings: €{forecast['savings_balance']:.2f}\n"
         f"💰 Total (Cash + Savings): €{forecast['total_free_including_savings']:.2f}\n"
         f"📆 Daily Budget: €{forecast['daily_budget']:.2f}\n"
+        f"📆 Adjusted Daily Budget (w/ Savings): €{forecast['daily_budget_including_savings']:.2f}\n"
         f"📦 Projected Savings: €{forecast['projected_savings']:.2f}",
         parse_mode="Markdown"
     )
+
     await state.update_data(latest_forecast=forecast)
     await message.answer(
         "💾 *Would you like to save this scenario?*\n"
@@ -238,10 +246,32 @@ async def list_scenarios(message: Message):
 
     lines = ["📋 *Your Forecast Scenarios:*"]
     for s in scenarios:
+        # 🧮 Расчёт
+        total_days = s.months * 30
+        current_savings = s.savings_balance or 0.0
+        adjusted_daily = (
+            (s.total_free + current_savings) / total_days if total_days > 0 else 0.0
+        )
+
+        # 💥 Одноразовые статьи (по extra_expenses)
+        extras = []
+        for item in s.extra_expenses:
+            name = item.get("name", "Unknown")
+            amount = item.get("amount", 0.0)
+            extras.append(f"{name} = €{amount:.0f}")
+
+        extras_text = ", ".join(extras) if extras else "—"
+
+        # 📄 Формируем блок
         lines.append(
             f"🆔 {s.id} — *{s.name}* ({s.months} months)\n"
-            f"💰 Free: €{s.total_free:.2f}, 💾 Savings: €{s.projected_savings:.2f}, 💸 Daily: €{s.daily_budget:.2f}"
+            f"💰 Free Cash: €{s.total_free:.2f}\n"
+            f"💾 Current Savings: €{current_savings:.2f}\n"
+            f"📦 Savings (Goal): €{s.projected_savings:.2f}\n"
+            f"📆 Daily Budget (w/ savings): €{adjusted_daily:.2f}\n"
+            f"🛫 One-time Expenses: {extras_text}"
         )
+
     await message.answer("\n\n".join(lines), parse_mode="Markdown")
 
 @router.message(F.text.startswith("/delete_scenario"))

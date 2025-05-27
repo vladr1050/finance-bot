@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, JSON, BigInteger
+from sqlalchemy import func, Column, Integer, String, Float, Boolean, DateTime, ForeignKey, JSON, BigInteger
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -14,8 +15,6 @@ class User(Base):
     monthly_savings = Column(Float, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_premium = Column(Boolean, default=False)
-
-    from sqlalchemy.orm import relationship
     forecast_scenarios = relationship("ForecastScenario", back_populates="user", cascade="all, delete-orphan")
 
 class FixedExpense(Base):
@@ -67,7 +66,24 @@ class MonthlyBudgetAdjustment(Base):
     type = Column(String, nullable=False)  # 'add' или 'subtract'
     amount = Column(Float, nullable=False)
     comment = Column(String, nullable=True)
-    apply_permanently = Column(Integer, default=0)  # 0 = нет, 1 = да
-    processed = Column(Integer, default=0)  # 0 = нет, 1 = да
+    apply_permanently = Column(Boolean, default=False)
+    processed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class ForecastScenario(Base):
+    __tablename__ = "forecast_scenarios"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+    months = Column(Integer, nullable=False)  # 1, 3, 6, or 12
+    income_changes = Column(Float, default=0.0)
+    fixed_changes = Column(Float, default=0.0)
+    extra_expenses = Column(JSONB, default=list)
+
+    projected_savings = Column(Float)
+    daily_budget = Column(Float)
+    total_free = Column(Float)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="forecast_scenarios")

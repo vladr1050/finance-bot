@@ -7,7 +7,7 @@ from aiogram.fsm.state import State
 from aiogram.filters import Command
 from db.database import async_session
 from sqlalchemy import select
-from db.models import User, FixedExpense
+from db.models import User, FixedExpense, SavingsBalance
 from states import ForecastScenarioFSM
 from forecast.logic import calculate_forecast
 from forecast.services import create_forecast_scenario, get_user_forecast_scenarios, delete_forecast_scenario
@@ -128,6 +128,15 @@ async def show_forecast(message: Message, state: FSMContext):
         fixed_changes=data["fixed_change"],
         extra_expenses=data["extra_expenses"]
     )
+    # 🔁 Добавляем текущие накопления
+    result = await session.execute(
+        select(SavingsBalance).where(SavingsBalance.user_id == user.id)
+    )
+    savings = result.scalar()
+    savings_amount = savings.amount if savings else 0.0
+
+    forecast["savings_balance"] = savings_amount
+    forecast["total_free_including_savings"] = forecast["total_free"] + savings_amount
 
     await message.answer(
         f"📊 *Forecast Summary*:\n\n"
@@ -137,8 +146,10 @@ async def show_forecast(message: Message, state: FSMContext):
         f"💰 Monthly Savings: €{data['savings_goal']:.2f}\n"
         f"➕ Extra Expenses: {len(data['extra_expenses'])} item(s)\n\n"
         f"📉 Total Free Cash: €{forecast['total_free']:.2f}\n"
+        f"💾 Current Savings: €{forecast['savings_balance']:.2f}\n"
+        f"💰 Total (Cash + Savings): €{forecast['total_free_including_savings']:.2f}\n"
         f"📆 Daily Budget: €{forecast['daily_budget']:.2f}\n"
-        f"💾 Projected Savings: €{forecast['projected_savings']:.2f}",
+        f"📦 Projected Savings: €{forecast['projected_savings']:.2f}",
         parse_mode="Markdown"
     )
     await state.update_data(latest_forecast=forecast)
@@ -148,7 +159,7 @@ async def show_forecast(message: Message, state: FSMContext):
         "Example:\n`/save_scenario_Summer_2025`",
         parse_mode="Markdown"
     )
-    
+
     @router.message(F.text.startswith("/save_scenario"))
     async def save_scenario(message: Message, state: FSMContext):
         args = message.text.split(" ", 1)

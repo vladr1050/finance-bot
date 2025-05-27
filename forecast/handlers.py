@@ -245,34 +245,41 @@ async def list_scenarios(message: Message):
         return
 
     lines = ["📋 *Your Forecast Scenarios:*"]
-    for s in scenarios:
-        # 🧮 Расчёт
-        total_days = s.months * 30
-        current_savings = s.savings_balance or 0.0
-        adjusted_daily = (
-            (s.total_free + current_savings) / total_days if total_days > 0 else 0.0
-        )
+    async with async_session() as session:
+        for s in scenarios:
+            # Получаем текущие накопления
+            result = await session.execute(
+                select(SavingsBalance).where(SavingsBalance.user_id == s.user_id)
+            )
+            savings = result.scalar()
+            current_savings = savings.amount if savings else 0.0
 
-        # 💥 Одноразовые статьи (по extra_expenses)
-        extras = []
-        for item in s.extra_expenses:
-            name = item.get("name", "Unknown")
-            amount = item.get("amount", 0.0)
-            extras.append(f"{name} = €{amount:.0f}")
+            # Расчёт дневного бюджета с учётом накоплений
+            total_days = s.months * 30
+            adjusted_daily = (
+                (s.total_free + current_savings) / total_days if total_days > 0 else 0.0
+            )
 
-        extras_text = ", ".join(extras) if extras else "—"
+            # Парсинг одноразовых расходов
+            extras = []
+            for item in s.extra_expenses:
+                name = item.get("name", "Unknown")
+                amount = item.get("amount", 0.0)
+                extras.append(f"{name} = €{amount:.0f}")
+            extras_text = ", ".join(extras) if extras else "—"
 
-        # 📄 Формируем блок
-        lines.append(
-            f"🆔 {s.id} — *{s.name}* ({s.months} months)\n"
-            f"💰 Free Cash: €{s.total_free:.2f}\n"
-            f"💾 Current Savings: €{current_savings:.2f}\n"
-            f"📦 Savings (Goal): €{s.projected_savings:.2f}\n"
-            f"📆 Daily Budget (w/ savings): €{adjusted_daily:.2f}\n"
-            f"🛫 One-time Expenses: {extras_text}"
-        )
+            # Формирование блока вывода
+            lines.append(
+                f"🆔 {s.id} — *{s.name}* ({s.months} months)\n"
+                f"💰 Free Cash: €{s.total_free:.2f}\n"
+                f"💾 Current Savings: €{current_savings:.2f}\n"
+                f"📦 Savings (Goal): €{s.projected_savings:.2f}\n"
+                f"📆 Daily Budget (w/ savings): €{adjusted_daily:.2f}\n"
+                f"🛫 One-time Expenses: {extras_text}"
+            )
 
     await message.answer("\n\n".join(lines), parse_mode="Markdown")
+
 
 @router.message(F.text.startswith("/delete_scenario"))
 async def delete_scenario_cmd(message: Message):

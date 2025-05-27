@@ -6,7 +6,7 @@ from forecast.logic import calculate_forecast
 from db.database import async_session
 from sqlalchemy import select
 from typing import List, Dict
-
+from sqlalchemy.orm import selectinload
 
 async def create_forecast_scenario(
     telegram_id: int,

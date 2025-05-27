@@ -143,11 +143,12 @@ async def show_forecast(message: Message, state: FSMContext):
     )
     await state.update_data(latest_forecast=forecast)
     await message.answer(
-        "💾 Would you like to save this scenario?\n"
-        "Send /save_scenario followed by a name.\n"
-        "Example:\n`/save_scenario Summer 2025`", parse_mode="Markdown"
+        "💾 *Would you like to save this scenario?*\n"
+        "Send `/save_scenario` followed by a name.\n"
+        "Example:\n`/save_scenario_Summer_2025`",
+        parse_mode="Markdown"
     )
-
+    
     @router.message(F.text.startswith("/save_scenario"))
     async def save_scenario(message: Message, state: FSMContext):
         args = message.text.split(" ", 1)

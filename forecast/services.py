@@ -53,7 +53,8 @@ async def create_forecast_scenario(
             extra_expenses=extra_expenses,
             projected_savings=forecast["projected_savings"],
             daily_budget=forecast["daily_budget"],
-            total_free=forecast["total_free"]
+            total_free=forecast["total_free"],
+            savings_balance = savings_amount
         )
 
         session.add(scenario)

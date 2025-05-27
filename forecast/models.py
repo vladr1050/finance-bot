@@ -22,3 +22,5 @@ class ForecastScenario(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="forecast_scenarios")
+    savings_balance = Column(Float, nullable=True, default=0.0)
+

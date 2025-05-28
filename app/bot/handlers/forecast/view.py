@@ -1,6 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from app.forecast.services import get_user_forecast_scenarios, delete_forecast_scenario
+from app.bot.handlers.forecast.services import get_user_forecast_scenarios, delete_forecast_scenario
 from app.db.database import async_session
 from app.db.models import SavingsBalance
 from sqlalchemy import select

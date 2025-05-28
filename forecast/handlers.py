@@ -9,8 +9,8 @@ from app.db.database import async_session
 from sqlalchemy import select
 from app.db.models import User, FixedExpense, SavingsBalance
 from states import ForecastScenarioFSM
-from forecast.logic import calculate_forecast
-from forecast.services import create_forecast_scenario, get_user_forecast_scenarios, delete_forecast_scenario
+from app.bot.handlers.forecast.logic import calculate_forecast
+from app.bot.handlers.forecast.services import create_forecast_scenario, get_user_forecast_scenarios, delete_forecast_scenario
 
 router = Router()
 

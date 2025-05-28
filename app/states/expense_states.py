@@ -12,3 +12,6 @@ class EditExpenseStates(StatesGroup):
     choosing_new_category = State()
     entering_new_comment = State()
 
+class DeleteExpenseStates(StatesGroup):
+    choosing_expense = State()
+    confirming_deletion = State()

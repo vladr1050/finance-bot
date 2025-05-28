@@ -5,8 +5,8 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, func, delete
 from datetime import date, datetime, timedelta
 
-from db.models import MonthlyBudgetAdjustment, User, FixedExpense, MonthlyBudget, DailyExpense
-from db.database import async_session
+from app.db.models import MonthlyBudgetAdjustment, User, FixedExpense, MonthlyBudget, DailyExpense
+from app.db.database import async_session
 from states import BudgetAdjustmentFSM
 from keyboards import main_menu
 from bot_setup import dp

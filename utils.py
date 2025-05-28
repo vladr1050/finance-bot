@@ -1,8 +1,8 @@
 import logging
 from datetime import date, timedelta
 from sqlalchemy import func, select
-from db.models import User, DailyExpense, MonthlyBudget, SavingsBalance
-from db.database import async_session
+from app.db.models import User, DailyExpense, MonthlyBudget, SavingsBalance
+from app.db.database import async_session
 
 logger = logging.getLogger(__name__)
 

@@ -4,8 +4,8 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from sqlalchemy import select
-from db.database import async_session
-from db.models import User, SavingsBalance
+from app.db.database import async_session
+from app.db.models import User, SavingsBalance
 from keyboards import main_menu, savings_menu, cancel_keyboard
 from bot_setup import dp
 

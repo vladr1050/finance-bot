@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import asyncio
 import logging
-from db.database import check_or_create_monthly_budgets
+from app.db.database import check_or_create_monthly_budgets
 from utils import handle_overspending, move_remaining_to_savings
 from app.config import Config
 

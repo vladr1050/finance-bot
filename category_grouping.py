@@ -3,8 +3,8 @@
 from aiogram import F
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
-from db.models import User, ExpenseCategory
-from db.database import async_session
+from app.db.models import User, ExpenseCategory
+from app.db.database import async_session
 from states import AddDailyExpense
 from sqlalchemy import select
 

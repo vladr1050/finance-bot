@@ -14,8 +14,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from db.database import init_db, check_or_create_monthly_budgets
-from db.models import MonthlyBudget
+from app.db.database import init_db, check_or_create_monthly_budgets
+from app.db.models import MonthlyBudget
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from collections import defaultdict
@@ -61,10 +61,10 @@ async def get_name(message: Message, state: FSMContext):
     await state.set_state(Register.waiting_for_income)
     await message.answer("What is your monthly income (EUR)?")
 
-from db.models import User, ExpenseCategory
+from app.db.models import User, ExpenseCategory
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
-from db.database import async_session
+from app.db.database import async_session
 from states import Register
 from keyboards import main_menu
 

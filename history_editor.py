@@ -5,8 +5,8 @@ from sqlalchemy import select, func
 from collections import defaultdict
 from datetime import datetime, timedelta, date
 
-from db.models import User, DailyExpense, ExpenseCategory
-from db.database import async_session
+from app.db.models import User, DailyExpense, ExpenseCategory
+from app.db.database import async_session
 from states import EditDailyExpense
 from keyboards import main_menu
 from functools import partial

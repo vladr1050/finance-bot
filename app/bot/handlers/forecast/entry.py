@@ -5,7 +5,6 @@ from aiogram.fsm.context import FSMContext
 from app.db.database import async_session
 from sqlalchemy import select
 from app.db.models import User, FixedExpense, SavingsBalance
-from app.states.forecast_states import ForecastScenarioFSM
 from app.forecast.logic import calculate_forecast
 from app.bot.handlers.forecast.states import ForecastScenarioFSM
 

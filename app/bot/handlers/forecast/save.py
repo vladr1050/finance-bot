@@ -8,7 +8,6 @@ from app.forecast.logic import calculate_forecast
 from app.forecast.services import create_forecast_scenario
 from app.bot.handlers.forecast.states import ForecastScenarioFSM
 
-
 save_router = Router()
 
 async def show_forecast(message: Message, state: FSMContext):

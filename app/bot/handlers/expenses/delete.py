@@ -1,4 +1,4 @@
-# app/bot/handlers/delete_expense.py
+# app/bot/handlers/delete.py
 
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery

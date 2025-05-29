@@ -3,9 +3,9 @@ from .start import start_router
 from app.bot.handlers.income.add import income_router
 from .expenses import expense_router
 from .forecast import forecast_router
-from .edit_expense import edit_expense_router
-from app.bot.handlers.delete_expense import delete_expense_router
-from app.bot.handlers.view_expenses import view_expenses_router
+from app.bot.handlers.expenses.edit import edit_expense_router
+from app.bot.handlers.expenses.delete import delete_expense_router
+from app.bot.handlers.expenses.view import view_expenses_router
 
 def register_all_handlers(dp: Dispatcher):
     dp.include_router(start_router)

@@ -1,4 +1,4 @@
-# app/bot/handlers/expenses.py
+# app/bot/handlers/add.py
 
 from aiogram import F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton

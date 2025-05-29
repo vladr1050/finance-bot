@@ -1,6 +1,6 @@
 from aiogram import Dispatcher
 from .start import start_router
-from .income import income_router
+from app.bot.handlers.income.add import income_router
 from .expenses import expense_router
 from .forecast import forecast_router
 from .edit_expense import edit_expense_router

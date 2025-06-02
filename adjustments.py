@@ -142,18 +142,28 @@ async def adjustment_choose_permanency(message: Message, state: FSMContext):
 @dp.callback_query(F.data.in_(["perm_yes", "perm_no"]))
 async def finalize_adjustment(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    await save_adjustment(
-        user_id=callback.from_user.id,
-        source=data["source"],
-        type_=data["adjust_type"],
-        amount=data["amount"],
-        comment=data["comment"],
-        permanent=(callback.data == "perm_yes")
-    )
+
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == callback.from_user.id))
+        user = result.scalar()
+
+        if not user:
+            await callback.message.answer("❌ User not found.")
+            await callback.answer()
+            return
+
+        await save_adjustment(
+            user_id=user.id,  # ✅ ВАЖНО: используем user.id, а не telegram_id
+            source=data["source"],
+            type_=data["adjust_type"],
+            amount=data["amount"],
+            comment=data["comment"],
+            permanent=(callback.data == "perm_yes")
+        )
+
     await callback.message.answer("✅ Adjustment saved.", reply_markup=main_menu())
     await state.clear()
     await callback.answer()
-
 
 # === Recalculate Budget Flow ===
 @dp.callback_query(F.data == "recalculate_budget")

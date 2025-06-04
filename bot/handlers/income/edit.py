@@ -42,6 +42,6 @@ async def process_new_income(message: Message, state: FSMContext):
         await message.answer("❌ Internal error: user not found.")
         return
 
-    await update_income_for_user(user_uuid=user_uuid, new_amount=amount)
+    await update_income_for_user(user_uuid=user_uuid, new_income=amount)
     await message.answer(f"✅ Your income has been updated to {amount:.2f}.", reply_markup=success_menu())
     await state.clear()

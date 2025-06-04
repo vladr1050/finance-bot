@@ -4,12 +4,12 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from app.states.history_states import HistoryFSM
-from app.utils.custom_calendar import SimpleCalendar
-from app.db.database import async_session
-from app.db.models import DailyExpense
+from states.history_states import HistoryFSM
+from utils.custom_calendar import SimpleCalendar
+from db.database import async_session
+from db.models import DailyExpense
 from sqlalchemy import select, func
-from app.utils.keyboards import main_menu
+from utils.keyboards import main_menu
 
 router = Router()
 

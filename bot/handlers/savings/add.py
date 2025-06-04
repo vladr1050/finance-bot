@@ -4,9 +4,9 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
-from app.states.savings_states import AddSavingsState
-from app.services.savings_service import add_to_savings
-from app.utils.keyboards import success_menu
+from states.savings_states import AddSavingsState
+from services.savings_service import add_to_savings
+from utils.keyboards import success_menu
 
 savings_add_router = Router()
 

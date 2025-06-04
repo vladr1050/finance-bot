@@ -3,9 +3,9 @@
 from uuid import UUID
 from datetime import datetime, date, timedelta
 from sqlalchemy import select, func
-from app.db.database import async_session
-from app.repositories.monthly_budget_adjustment import get_adjustments
-from app.db.models import User, FixedExpense, DailyExpense, MonthlyBudget, MonthlyBudgetAdjustment
+from db.database import async_session
+from repositories.monthly_budget_adjustment import get_adjustments
+from db.models import User, FixedExpense, DailyExpense, MonthlyBudget, MonthlyBudgetAdjustment
 
 
 async def recalculate_budget(

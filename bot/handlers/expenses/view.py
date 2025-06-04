@@ -5,8 +5,8 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select, desc
 from datetime import datetime, timedelta
-from app.db.database import async_session
-from app.db.models import DailyExpense, ExpenseCategory
+from db.database import async_session
+from db.models import DailyExpense, ExpenseCategory
 from collections import defaultdict
 
 view_expenses_router = Router()

@@ -3,8 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
-from app.db.models import SavingsBalance
-
+from db.models import SavingsBalance
 
 async def get_savings(session: AsyncSession, user_uuid: UUID):
     """

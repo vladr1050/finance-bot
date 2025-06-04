@@ -4,7 +4,7 @@ from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from app.services.savings_service import get_savings_balance
+from services.savings_service import get_savings_balance
 
 savings_view_router = Router()
 

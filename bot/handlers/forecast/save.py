@@ -1,16 +1,16 @@
 # app/bot/handlers/forecast/save.py
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
-from app.db.models import FixedExpense
+from db.models import FixedExpense
 from sqlalchemy import select, func
-from app.services.forecast_logic import calculate_forecast
-from app.db.database import async_session
+from services.forecast_logic import calculate_forecast
+from db.database import async_session
 from aiogram import Router, F
 from aiogram.filters import StateFilter
-from app.states.forecast_states import SaveForecastState
+from states.forecast_states import SaveForecastState
 from aiogram.fsm.context import FSMContext
-from app.services.forecast_service import save_forecast
-from app.utils.keyboards import success_menu
+from services.forecast_service import save_forecast
+from utils.keyboards import success_menu
 
 router = Router()
 
@@ -125,6 +125,6 @@ async def save_forecast_final(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "forecast_add_another")
 async def restart_forecast_flow(callback: CallbackQuery, state: FSMContext):
-    from app.bot.handlers.forecast.entry import start_forecast  # avoid circular import
+    from bot.handlers.forecast.entry import start_forecast
     await start_forecast(callback.message, state)
     await callback.answer()

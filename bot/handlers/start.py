@@ -2,11 +2,11 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
-from app.utils.keyboards import main_menu
+from utils.keyboards import main_menu
 from aiogram.fsm.context import FSMContext
-from app.bot.handlers.income.edit import start_edit_income
-from app.bot.handlers.income.view import view_income
-from app.db.database import async_session
+from bot.handlers.income.edit import start_edit_income
+from bot.handlers.income.view import view_income
+from db.database import async_session
 
 router = Router()
 

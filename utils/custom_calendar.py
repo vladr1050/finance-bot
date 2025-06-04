@@ -2,7 +2,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from aiogram_calendar import SimpleCalendar
 from aiogram.fsm.context import FSMContext
 from datetime import date
-from keyboards import main_menu
+from utils.keyboards import main_menu
 
 async def show_start_calendar(callback: CallbackQuery, state: FSMContext):
     calendar = await SimpleCalendar().start_calendar()

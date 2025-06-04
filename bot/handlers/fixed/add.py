@@ -4,10 +4,10 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
-from app.states.fixed_states import AddFixedExpenseState
-from app.services.fixed_service import create_fixed_expense
-from app.db.database import async_session
-from app.utils.keyboards import success_menu
+from states.fixed_states import AddFixedExpenseState
+from services.fixed_service import create_fixed_expense
+from db.database import async_session
+from utils.keyboards import success_menu
 
 add_fixed_router = Router()
 

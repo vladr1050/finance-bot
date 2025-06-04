@@ -3,9 +3,9 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
-from app.db.database import async_session
+from db.database import async_session
 from sqlalchemy import select
-from app.db.models import DailyExpense
+from db.models import DailyExpense
 
 router = Router()
 

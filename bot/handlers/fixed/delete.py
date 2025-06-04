@@ -4,10 +4,10 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from app.states.fixed_states import DeleteFixedExpenseState
-from app.services.fixed_service import list_fixed_expenses, delete_fixed_expense
-from app.db.database import async_session
-from app.utils.keyboards import success_menu
+from states.fixed_states import DeleteFixedExpenseState
+from services.fixed_service import list_fixed_expenses, delete_fixed_expense
+from db.database import async_session
+from utils.keyboards import success_menu
 
 delete_fixed_router = Router()
 

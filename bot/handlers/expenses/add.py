@@ -4,11 +4,11 @@ from aiogram import F, Router
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
-from app.states.expense_states import AddExpenseStates
-from app.services.expense_service import save_expense
-from app.db.database import async_session
-from app.db.models import ExpenseCategory
-from app.utils.keyboards import success_menu
+from states.expense_states import AddExpenseStates
+from services.expense_service import save_expense
+from db.database import async_session
+from db.models import ExpenseCategory
+from utils.keyboards import success_menu
 
 expense_router = Router()
 

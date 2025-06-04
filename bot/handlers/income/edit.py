@@ -3,9 +3,9 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
-from app.states.income_states import IncomeEditState
-from app.services.income_service import update_income_for_user, get_user_income
-from app.utils.keyboards import success_menu
+from states.income_states import IncomeEditState
+from services.income_service import update_income_for_user, get_user_income
+from utils.keyboards import success_menu
 
 income_edit_router = Router()
 

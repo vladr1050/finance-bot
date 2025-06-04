@@ -1,8 +1,8 @@
 from datetime import date
 from uuid import UUID
 
-from app.db.database import async_session
-from app.repositories.expense_repository import (
+from db.database import async_session
+from repositories.expense_repository import (
     get_daily_expenses_by_user,
     add_daily_expense,
     delete_daily_expense,

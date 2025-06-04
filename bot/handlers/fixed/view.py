@@ -4,8 +4,8 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from app.services.fixed_service import list_fixed_expenses
-from app.db.database import async_session
+from services.fixed_service import list_fixed_expenses
+from db.database import async_session
 
 view_fixed_router = Router()
 

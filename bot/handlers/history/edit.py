@@ -4,10 +4,10 @@ from aiogram import Router, F
 from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
-from app.states.history_states import EditExpenseFSM
-from app.db.database import async_session
-from app.db.models import DailyExpense, User
-from app.utils.keyboards import success_menu
+from states.history_states import EditExpenseFSM
+from db.database import async_session
+from db.models import DailyExpense, User
+from utils.keyboards import success_menu
 
 router = Router()
 

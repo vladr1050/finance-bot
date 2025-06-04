@@ -1,8 +1,8 @@
 # app/services/fixed_service.py
 
 from uuid import UUID
-from app.db.database import async_session
-from app.repositories.fixed_repository import (
+from db.database import async_session
+from repositories.fixed_repository import (
     add_fixed_expense,
     get_user_fixed_expenses,
     delete_fixed_expense_by_name,

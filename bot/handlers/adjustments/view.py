@@ -2,9 +2,9 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from datetime import date
-from app.db.database import async_session
+from db.database import async_session
 from sqlalchemy import select
-from app.db.models import MonthlyBudgetAdjustment
+from db.models import MonthlyBudgetAdjustment
 from aiogram.fsm.context import FSMContext
 
 router = Router()

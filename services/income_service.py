@@ -1,8 +1,8 @@
 # app/services/income_service.py
 
 from uuid import UUID
-from app.db.database import async_session
-from app.db.models import User
+from db.database import async_session
+from db.models import User
 from sqlalchemy import select
 
 

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select, func
 
-from app.db.models import (
+from db.models import (
     Base,
     User,
     FixedExpense,
@@ -13,7 +13,7 @@ from app.db.models import (
     DailyExpense,
     MonthlyBudgetAdjustment
 )
-from app.config import Config
+from config import Config
 
 logger = logging.getLogger(__name__)
 

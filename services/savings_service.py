@@ -1,8 +1,8 @@
 # app/services/savings_service.py
 
 from uuid import UUID
-from app.db.database import async_session
-from app.repositories.savings_repository import (
+from db.database import async_session
+from repositories.savings_repository import (
     get_savings,
     save_savings,
     increment_savings

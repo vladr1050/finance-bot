@@ -4,10 +4,10 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
-from app.utils.keyboards import success_menu
+from utils.keyboards import success_menu
 
-from app.states.income_states import IncomeState
-from app.services.income_service import add_income_for_user
+from states.income_states import IncomeState
+from services.income_service import add_income_for_user
 
 income_add_router = Router()
 

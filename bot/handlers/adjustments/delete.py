@@ -5,16 +5,17 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from app.db.database import async_session
+from db.database import async_session
 from sqlalchemy import select
-from app.db.models import MonthlyBudgetAdjustment
+from db.models import MonthlyBudgetAdjustment
 from datetime import date
+from typing import Union
 
 router = Router()
 
 @router.message(Command("delete_adjustments"))
 @router.callback_query(F.data == "delete_adjustments")
-async def list_adjustments_for_deletion(event: Message | CallbackQuery, state: FSMContext):
+async def list_adjustments_for_deletion(event: Union[Message, CallbackQuery], state: FSMContext):
     """Handles both /delete_adjustments command and inline button callback"""
     data = await state.get_data()
     user_uuid = data.get("user_uuid")

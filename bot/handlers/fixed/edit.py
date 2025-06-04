@@ -4,9 +4,9 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from app.states.fixed_states import EditFixedExpenseState
-from app.services.fixed_service import list_fixed_expenses, update_fixed_expense
-from app.utils.keyboards import success_menu
+from states.fixed_states import EditFixedExpenseState
+from services.fixed_service import list_fixed_expenses, update_fixed_expense
+from utils.keyboards import success_menu
 
 edit_fixed_router = Router()
 

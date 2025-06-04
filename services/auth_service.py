@@ -2,9 +2,9 @@
 import bcrypt
 from uuid import uuid4
 from sqlalchemy import select
-from app.db.database import async_session
-from app.db.models import User
-
+from db.database import async_session
+from db.models import User
+from typing import Union
 
 async def register_user(email: str, password: str, telegram_id: int = None) -> User:
     """
@@ -32,8 +32,8 @@ async def register_user(email: str, password: str, telegram_id: int = None) -> U
         await session.commit()
         return new_user
 
+async def authenticate_user(email: str, password: str) -> Union[User, None]:
 
-async def authenticate_user(email: str, password: str) -> User | None:
     """
     Authenticates a user by email and password.
     Returns the user if successful, otherwise None.

@@ -2,9 +2,9 @@
 
 from aiogram import Router, F
 from aiogram.types import Message
-from app.services.income_service import get_user_income
-from app.db.database import async_session
-from app.db.models import User
+from services.income_service import get_user_income
+from db.database import async_session
+from db.models import User
 from sqlalchemy import select
 
 income_view_router = Router()

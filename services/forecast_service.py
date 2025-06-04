@@ -1,8 +1,8 @@
 # app/services/forecast_service.py
 
 from uuid import UUID
-from app.db.database import async_session
-from app.repositories.forecast_repository import (
+from db.database import async_session
+from repositories.forecast_repository import (
     create_forecast_scenario,
     list_user_forecasts,
     get_forecast_by_id,

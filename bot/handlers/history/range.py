@@ -4,10 +4,10 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from app.states.history_states import RangeHistoryFSM
-from app.utils.custom_calendar import SimpleCalendar
-from app.db.database import async_session
-from app.db.models import DailyExpense
+from states.history_states import RangeHistoryFSM
+from utils.custom_calendar import SimpleCalendar
+from db.database import async_session
+from db.models import DailyExpense
 from sqlalchemy import select, func
 from datetime import timedelta
 

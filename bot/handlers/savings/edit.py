@@ -5,11 +5,11 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from sqlalchemy import select
-from app.states.savings_states import SetSavingsState
-from app.services.savings_service import set_savings_balance
-from app.db.database import async_session
-from app.db.models import User
-from app.utils.keyboards import success_menu
+from states.savings_states import SetSavingsState
+from services.savings_service import set_savings_balance
+from db.database import async_session
+from db.models import User
+from utils.keyboards import success_menu
 
 savings_edit_router = Router()
 

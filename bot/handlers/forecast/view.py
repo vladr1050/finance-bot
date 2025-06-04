@@ -4,15 +4,16 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from app.db.database import async_session
-from app.db.models import ForecastScenario
+from db.database import async_session
+from db.models import ForecastScenario
 from sqlalchemy import select
+from typing import Union
 
 router = Router()
 
 @router.message(Command("forecasts"))
 @router.callback_query(F.data == "forecast_view_all")
-async def show_forecasts(event: Message | CallbackQuery, state: FSMContext):
+async def show_forecasts(event: Union[Message, CallbackQuery], state: FSMContext):
     """Show all saved forecast scenarios with buttons"""
 
     send_func = event.answer if isinstance(event, Message) else event.message.edit_text

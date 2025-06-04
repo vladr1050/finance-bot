@@ -6,9 +6,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from datetime import date
 
-from app.repositories.monthly_budget_adjustment import add_adjustment
-from app.db.database import async_session
-from app.states.adjustment_states import BudgetAdjustmentFSM
+from repositories.monthly_budget_adjustment import add_adjustment
+from db.database import async_session
+from states.adjustment_states import BudgetAdjustmentFSM
 
 router = Router()
 

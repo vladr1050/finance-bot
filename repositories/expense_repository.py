@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 from uuid import UUID
 
-from app.db.models import DailyExpense
+from db.models import DailyExpense
 
 
 async def get_daily_expenses_by_user(session: AsyncSession, user_uuid: UUID):

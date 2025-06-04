@@ -4,11 +4,11 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from app.db.database import async_session
+from db.database import async_session
 from sqlalchemy import select
-from app.db.models import User
-from app.states.forecast_states import ForecastScenarioFSM
-from app.utils.keyboards import success_menu
+from db.models import User
+from states.forecast_states import ForecastScenarioFSM
+from utils.keyboards import success_menu
 
 router = Router()
 

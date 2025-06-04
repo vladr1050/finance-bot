@@ -3,7 +3,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from app.services.auth_service import register_user
+from services.auth_service import register_user
 
 router = Router()
 

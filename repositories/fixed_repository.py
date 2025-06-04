@@ -3,7 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from uuid import UUID
-from app.db.models import FixedExpense
+from db.models import FixedExpense
 
 
 async def add_fixed_expense(session: AsyncSession, user_uuid: UUID, name: str, amount: float):

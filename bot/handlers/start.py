@@ -5,7 +5,6 @@ from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardBut
 from utils.keyboards import main_menu
 from aiogram.fsm.context import FSMContext
 from bot.handlers.income.edit import start_edit_income
-from bot.handlers.income.view import view_income
 from db.database import async_session
 
 router = Router()

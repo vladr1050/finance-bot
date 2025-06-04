@@ -57,11 +57,6 @@ async def handle_edit_income(callback: CallbackQuery, state: FSMContext):
     await start_edit_income(callback.message, state)
     await callback.answer()
 
-@router.callback_query(F.data == "view_income")
-async def handle_view_income(callback: CallbackQuery):
-    await view_income(callback.message)
-    await callback.answer()
-
 @router.callback_query(F.data == "main_menu")
 async def back_to_main(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[

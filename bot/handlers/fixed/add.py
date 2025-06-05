@@ -32,7 +32,7 @@ async def process_amount(message: Message, state: FSMContext):
         await message.answer("❌ You are not logged in. Please /login first.")
         return
 
-    await create_fixed_expense(user_uuid=user.uuid, name=name, amount=amount)
+    await create_fixed_expense(user_uuid=user.user_uuid, name=name, amount=amount)
     await message.answer(f"✅ Added fixed expense: {name} – {amount:.2f}", reply_markup=success_menu())
     await state.clear()
 

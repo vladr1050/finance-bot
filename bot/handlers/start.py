@@ -82,26 +82,6 @@ async def menu_fixed(callback: CallbackQuery):
     await callback.message.edit_text("🏠 *Fixed Expenses Menu* — Choose an action:", parse_mode="Markdown", reply_markup=keyboard)
     await callback.answer()
 
-@router.callback_query(F.data == "add_fixed")
-async def handle_add_fixed(callback: CallbackQuery):
-    await callback.message.answer("➕ Use /add_fixed to add a new fixed expense.")
-    await callback.answer()
-
-@router.callback_query(F.data == "edit_fixed")
-async def handle_edit_fixed(callback: CallbackQuery):
-    await callback.message.answer("✏️ Use /edit_fixed to modify your fixed expenses.")
-    await callback.answer()
-
-@router.callback_query(F.data == "view_fixed")
-async def handle_view_fixed(callback: CallbackQuery):
-    await callback.message.answer("📋 Use /view_fixed to see your current fixed expenses.")
-    await callback.answer()
-
-@router.callback_query(F.data == "delete_fixed")
-async def handle_delete_fixed(callback: CallbackQuery):
-    await callback.message.answer("🗑 Use /delete_fixed to remove a fixed expense.")
-    await callback.answer()
-
 @router.callback_query(F.data == "menu_expenses")
 async def menu_expenses(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[

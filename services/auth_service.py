@@ -4,7 +4,7 @@ from uuid import uuid4
 from sqlalchemy import select
 from db.database import async_session
 from db.models import User
-from typing import Union
+from typing import Union, Optional
 
 async def register_user(email: str, password: str, telegram_id: int = None) -> User:
     """
@@ -54,3 +54,8 @@ async def link_telegram_id(user_uuid: str, telegram_id: int) -> None:
         if user:
             user.telegram_id = telegram_id
             await session.commit()
+
+async def get_user_by_telegram_id(telegram_id: int) -> Optional[User]:
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        return result.scalar_one_or_none()

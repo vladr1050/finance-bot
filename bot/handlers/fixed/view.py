@@ -1,32 +1,28 @@
-# app/bot/handlers/fixed/view.py
+# bot/handlers/fixed/view.py
 
 from aiogram import Router, F
 from aiogram.types import Message
-from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext
+from services.auth_service import get_user_by_telegram_id
 from services.fixed_service import list_fixed_expenses
-from db.database import async_session
+from utils.keyboards import fixed_expense_item_kb
 
 view_fixed_router = Router()
 
-@view_fixed_router.message(Command("fixed"))
-async def show_fixed_expenses(message: Message, state: FSMContext):
-    data = await state.get_data()
-    user_uuid = data.get("user_uuid")
-
-    if not user_uuid:
+@view_fixed_router.message(F.text.lower() == "💼 fixed expenses")
+async def show_fixed_expenses(message: Message):
+    user = await get_user_by_telegram_id(message.from_user.id)
+    if not user:
         await message.answer("❌ You are not logged in. Please /login first.")
         return
 
-    async with async_session() as session:
-        expenses = await list_fixed_expenses(user_id=user_uuid)
+    expenses = await list_fixed_expenses(user.uuid)
 
     if not expenses:
-        await message.answer("📭 You have no fixed expenses.")
+        await message.answer("📭 You don’t have any fixed expenses yet.")
         return
 
-    text = "📋 Your fixed expenses:\n\n"
-    for e in expenses:
-        text += f"• {e.name}: {e.amount:.2f}\n"
-
-    await message.answer(text)
+    for expense in expenses:
+        await message.answer(
+            text=f"📌 {expense.name}: {expense.amount:.2f}",
+            reply_markup=fixed_expense_item_kb(expense.id)
+        )

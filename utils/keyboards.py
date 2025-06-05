@@ -15,3 +15,19 @@ def success_menu():
         [InlineKeyboardButton(text="📋 View Data", callback_data="view_last_action")],
         [InlineKeyboardButton(text="➕ Do Similar Again", callback_data="repeat_last_action")]
     ])
+
+def fixed_expense_item_kb(fixed_id: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_fixed:{fixed_id}"),
+            InlineKeyboardButton(text="❌ Delete", callback_data=f"delete_fixed:{fixed_id}")
+        ]
+    ])
+
+def confirm_delete_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Yes, delete", callback_data="confirm_delete"),
+            InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_delete")
+        ]
+    ])

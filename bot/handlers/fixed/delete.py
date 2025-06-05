@@ -1,55 +1,36 @@
-# app/bot/handlers/fixed/delete.py
+# bot/handlers/fixed/delete.py
 
 from aiogram import Router, F
-from aiogram.types import Message
-from aiogram.filters import Command
+from aiogram.types import CallbackQuery
 from aiogram.fsm.context import FSMContext
-from states.fixed_states import DeleteFixedExpenseState
-from services.fixed_service import list_fixed_expenses, delete_fixed_expense
-from db.database import async_session
-from utils.keyboards import success_menu
+from services.auth_service import get_user_by_telegram_id
+from services.fixed_service import delete_fixed_expense_by_id, get_fixed_expense_by_id
+from utils.keyboards import confirm_delete_kb, success_menu
 
 delete_fixed_router = Router()
 
-@delete_fixed_router.message(Command("delete_fixed"))
-async def start_delete_fixed_expense(message: Message, state: FSMContext):
+@delete_fixed_router.callback_query(F.data.startswith("delete_fixed:"))
+async def ask_delete_confirmation(callback: CallbackQuery, state: FSMContext):
+    fixed_id = callback.data.split(":")[1]
+    await state.update_data(fixed_id=fixed_id)
+    await callback.message.edit_text("❗ Are you sure you want to delete this fixed expense?", reply_markup=confirm_delete_kb())
+
+@delete_fixed_router.callback_query(F.data == "confirm_delete")
+async def confirm_delete(callback: CallbackQuery, state: FSMContext):
+    user = await get_user_by_telegram_id(callback.from_user.id)
     data = await state.get_data()
-    user_uuid = data.get("user_uuid")
+    fixed_id = data.get("fixed_id")
 
-    if not user_uuid:
-        await message.answer("❌ You are not logged in. Please /login first.")
+    expense = await get_fixed_expense_by_id(fixed_id)
+    if not expense or expense.user_id != user.uuid:
+        await callback.message.edit_text("❌ Expense not found or permission denied.")
         return
 
-    async with async_session() as session:
-        expenses = await list_fixed_expenses(user_id=user_uuid)
+    await delete_fixed_expense_by_id(fixed_id)
+    await callback.message.edit_text("✅ Expense deleted successfully.", reply_markup=success_menu())
+    await state.clear()
 
-    if not expenses:
-        await message.answer("📭 You have no fixed expenses.")
-        return
-
-    text = "❌ Choose the expense to delete by typing its name:\n\n"
-    text += "\n".join(f"• {e.name}" for e in expenses)
-    await message.answer(text)
-    await state.set_state(DeleteFixedExpenseState.select_expense)
-
-
-@delete_fixed_router.message(DeleteFixedExpenseState.select_expense)
-async def confirm_delete_fixed_expense(message: Message, state: FSMContext):
-    name = message.text.strip()
-    data = await state.get_data()
-    user_uuid = data.get("user_uuid")
-
-    if not user_uuid:
-        await message.answer("❌ You are not logged in. Please /login first.")
-        await state.clear()
-        return
-
-    async with async_session() as session:
-        success = await delete_fixed_expense(user_id=user_uuid, name=name)
-
-    if success:
-        await message.answer(f"✅ Deleted fixed expense: {name}", reply_markup=success_menu())
-    else:
-        await message.answer(f"⚠️ Could not find an expense named '{name}'")
-
+@delete_fixed_router.callback_query(F.data == "cancel_delete")
+async def cancel_delete(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("❎ Deletion cancelled.", reply_markup=success_menu())
     await state.clear()
